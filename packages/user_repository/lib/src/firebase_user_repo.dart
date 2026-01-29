@@ -98,11 +98,15 @@ class FirebaseUserRepo implements UserRepository {
   @override
   Future<void> setUserData(MyUser myUser) async {
     try {
+      log("setUserData: Writing user document for UID: ${myUser.userId}");
+      log("setUserData: User data: ${myUser.toEntity().toDocument()}");
       await usersCollection
           .doc(myUser.userId)
           .set(myUser.toEntity().toDocument(), SetOptions(merge: true));
+      log("setUserData: Successfully wrote document to Firestore");
     } catch (e) {
       log("SetUserData Error: $e");
+      log("SetUserData Error Type: ${e.runtimeType}");
       rethrow;
     }
   }
