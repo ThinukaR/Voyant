@@ -1,6 +1,6 @@
 # voyant
 
-A new Flutter project.
+A gamified travel application which is made to engage users into exploration
 
 ## Getting Started
 
