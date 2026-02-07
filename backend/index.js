@@ -3,7 +3,7 @@ const connectToDatabase = require('./db');
 async function startApp() {
   const db = await connectToDatabase();
   
-  // Let's try to create a collection and insert one document
+  // Creating a collection
   const casesCollection = db.collection('test_collection');
 }
 
