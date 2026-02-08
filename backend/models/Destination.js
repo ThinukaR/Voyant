@@ -1,6 +1,6 @@
-// Database schema for location
 const mongoose = require("mongoose");
 
+// Database schema for location
 const databaseSchema = new mongoose.Schema({
   name: {
     type: String,
