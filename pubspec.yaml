@@ -39,6 +39,7 @@ dependencies:
   flutter_bloc: ^9.1.1
   bloc: ^9.2.0
   equatable: ^2.0.5
+  google_maps_flutter: ^2.14.0
 
   user_repository:
     path: packages/user_repository
