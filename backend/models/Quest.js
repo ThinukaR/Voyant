@@ -40,6 +40,10 @@ const questSchema = new mongoose.schema({
     message: "{VALUE} is not a valid difficulty level",
     default: "Easy",
   },
+  achievements: {
+    type: String,
+    required: [true, 'A quest must provide achievements or xp']
+} 
 });
 
 const Quest = mongoose.model("Quest", questSchema);
