@@ -3,14 +3,8 @@ const mongoose = require('mongoose');
 const taskSchema = new mongoose.Schema({
     taskId: {
         type: Number,
-<<<<<<< Updated upstream
         required: true
     },
-=======
-        required: true,
-        unique: true
-    }
->>>>>>> Stashed changes
     name: {
         type: String,
         required: true,
