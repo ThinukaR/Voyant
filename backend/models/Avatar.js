@@ -17,7 +17,7 @@ const userAvatarSchema = new mongoose.Schema({
   characterData: {
     type: String,
     default: [] // to be filled later
-  }
+  },
   // Array of cosmetic item names or IDs
   cosmetics: {
     type: [String],
