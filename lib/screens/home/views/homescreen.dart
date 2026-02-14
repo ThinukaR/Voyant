@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:voyant/blocs/authentication_bloc/authentication_bloc.dart';
+import 'package:voyant/screens/map/map.dart';
 
 class Homescreen extends StatelessWidget {
   const Homescreen({super.key});
@@ -23,9 +24,7 @@ class Homescreen extends StatelessWidget {
           ),
         ],
       ),
-      body: const Center(
-        child: Text('Welcome to the Home Screen!'),
-      ),
+      body: const Map(),
     );
   }
 }

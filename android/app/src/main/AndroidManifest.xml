@@ -3,6 +3,10 @@
         android:label="voyant"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <meta-data 
+          android:name="com.google.android.geo.API_KEY"
+          android:value="AIzaSyBiOy3rNiNah0h_-jH0AoNCppikyaAXeLU"
+          />
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -31,6 +35,11 @@
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
+    <!-- Internet permission for Google Maps tiles -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Location permissions for Google Maps -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
          https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.
