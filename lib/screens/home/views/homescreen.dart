@@ -9,22 +9,15 @@ class Homescreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Home Screen'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              // Dispatch the logout event
-              context.read<AuthenticationBloc>().add(AuthenticationLogoutRequested());
-            },
-            child: const Text(
-              'Sign Out',
-              style: TextStyle(color: Colors.black),
-            ),
-          ),
-        ],
-      ),
       body: const Map(),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          // Dispatch the logout event
+          context.read<AuthenticationBloc>().add(AuthenticationLogoutRequested());
+        },
+        label: const Text('Sign Out'),
+        icon: const Icon(Icons.logout),
+      ),
     );
   }
 }
