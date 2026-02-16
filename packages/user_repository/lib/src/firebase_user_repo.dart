@@ -71,9 +71,12 @@ class FirebaseUserRepo implements UserRepository {
 
       myUser.userId = userCredential.user!.uid;
 
+      // Adding email verification
+      await userCredential.user!.sendEmailVerification();
+
       // Save the user immediately to Firestore
       await setUserData(myUser);
-
+      
       return myUser;
     } catch (e) {
       debugPrint("❌ SignUp Error: $e");
@@ -108,5 +111,39 @@ class FirebaseUserRepo implements UserRepository {
       debugPrint("❌ SetUserData StackTrace: $stackTrace");
       rethrow;
     }
+  }
+}
+
+@override
+Future<void> deleteAccount() async {
+  try {
+    final user = _firebaseAuth.currentUser;
+    if (user != null) {
+      await usersCollection.doc(user.uid).delete();
+      await user.delete();
+    }
+  } catch (e) {
+    debugPrint("Delete Account Error: $e");
+    rethrow;
+  }
+}
+
+@override
+Future<void> updateEmail(String newEmail) async {
+  try {
+    await _firebaseAuth.currentUser?.updateEmail(newEmail);
+  } catch (e) {
+    debugPrint("Update Email Error: $e");
+    rethrow;
+  }
+}
+
+@override
+Future<void> updatePassword(String newPassword) async {
+  try {
+    await _firebaseAuth.currentUser?.updatePassword(newPassword);
+  } catch (e) {
+    debugPrint("Update Password Error: $e");
+    rethrow;
   }
 }
