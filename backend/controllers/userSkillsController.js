@@ -1,12 +1,12 @@
-const SkillData = require("../models/Destination.js");
+const SkillData = require("../models/UserSkills.js");
 
 exports.createSkill = async (req, res) => {
   try {
-    // Creating destination
-    const newDestination = await SkillData.create(req.body);
+    // Creating skill
+    const newSkill = await SkillData.create(req.body);
     res.status(201).json({
       status: "success",
-      data: { destination: newDestination },
+      data: { skill: newSkill },
     });
   } catch (err) {
     res.status(400).json({
@@ -18,12 +18,12 @@ exports.createSkill = async (req, res) => {
 
 exports.getUserSkillData = async (req, res) => {
   try {
-    // Reading the destnation
-    const destination = await SkillData.findById(req.params.id);
-    if (!destination) {
+    // Reading the skill
+    const skill = await SkillData.findById(req.params.id);
+    if (!skill) {
       return res.status(404).json({
         status: "fail",
-        message: "Destination not found",
+        message: "Skill not found",
       });
     }
 
@@ -42,17 +42,17 @@ exports.getUserSkillData = async (req, res) => {
 exports.updateUserSkillData = async (req, res) => {
   try {
     // Updating destination
-    const updatedDestination = await SkillData.findByIdAndUpdate(
+    const updatedSkills = await SkillData.findByIdAndUpdate(
       req.params.id,
       req.body,
       { new: true, runValidators: true },
     );
 
     // Checking if destination exists
-    if (!updatedDestinationn) {
+    if (!updatedSkills) {
       return res.status(404).json({
         status: "fail",
-        message: "Destination not found",
+        message: "Skill not found",
       });
     }
   } catch (err) {
@@ -65,27 +65,27 @@ exports.updateUserSkillData = async (req, res) => {
 
 exports.deleteUserSkillData = async (req, res) => {
   try {
-    const destination = await SkillData.findById(req.params.id);
+    const skillToDelete = await SkillData.findById(req.params.id);
     // Checking if document exists before deleting
-    if (!destination) {
+    if (!skillToDelete) {
       return res.status(404).json({
         status: "fail",
-        message: "Destination not found",
+        message: "Skill not found",
       });
     }
     // Logging the data deleted
-    console.log(destination);
+    console.log(skillToDelete);
 
     // Authentication check
-    if (destination.createdBy.toString() !== req.user.id) {
+    if (skillToDelete.createdBy.toString() !== req.user.id) {
       return res.status(403).json({
         status: "fail",
-        message: "You do not have permission to delete this destination",
+        message: "You do not have permission to delete this skill",
       });
     }
 
     // Deletion
-    await destination.deleteOne();
+    await skillToDelete.deleteOne();
     res.status(204).json({
       status: "success",
       data: null,
@@ -99,5 +99,5 @@ exports.deleteUserSkillData = async (req, res) => {
 };
 
 exports.getAllUserSkillData = async (req, res) => {
-  const destinations = await SkillData.find({ active: { $ne: false } });
+  const skills = await SkillData.find({ active: { $ne: false } });
 };
