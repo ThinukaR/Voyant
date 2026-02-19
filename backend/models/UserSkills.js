@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const userSkillSchema = new mongoose.schema({
+const userSkillSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,
@@ -29,6 +29,6 @@ const userSkillSchema = new mongoose.schema({
 // Avoiding duplicates
 userSkillSchema.index({ userId: 1, skillId: 1 }, { unique: true });
 
-const UserSkills = mongoose.model("Skill", userSkillSchema);
+const UserSkill = mongoose.model("UserSkill", userSkillSchema);
 
-module.exports = UserSkills;
+module.exports = UserSkill;

@@ -27,7 +27,7 @@ const questSchema = new mongoose.schema({
   // Foreign key
   location: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Location",
+    ref: "Destination",
     required: [true, "A quest must belong to a specific location"],
   },
   questType: {
@@ -42,8 +42,8 @@ const questSchema = new mongoose.schema({
   },
   achievements: {
     type: String,
-    required: [true, 'A quest must provide achievements or xp']
-  } 
+    required: [true, "A quest must provide achievements or xp"],
+  },
 });
 
 const Quest = mongoose.model("Quest", questSchema);

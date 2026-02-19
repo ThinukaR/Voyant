@@ -1,5 +1,7 @@
 const DestinationData = require("../models/Destination.js");
-const SkillData = require("../models/Destination.js");
+const SkillData = require("../models/Skill.js");
+const UserSkill = require("../models/UserSkills.js");
+const User = require("../models/UserAccountDetails.js");
 
 // Destination
 exports.getDestinationDetails = async (req, res) => {
@@ -51,8 +53,4 @@ exports.getSkillsDetails = async (req, res) => {
       message: err.message,
     });
   }
-};
-
-exports.getAllSkills = async (req, res) => {
-  const skillsData = await SkillData.find({ active: { $ne: false } });
 };
