@@ -14,4 +14,4 @@ router
   .patch(userSkillController.updateUserSkill)
   .delete(userSkillController.removeUserSkill);
 
-router.patch("/id:", userSkillController.updateUserSkillLevel);
+router.patch("/:id", userSkillController.updateUserSkillLevel);

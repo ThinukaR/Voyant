@@ -1,9 +1,9 @@
 const express = require("express");
-const router = express.router;
+const router = express.Router();
 const destinationController = require("../controllers/destinationController");
 
 // Routes
-router.get("/id:", destinationController.getDestinationDetails);
+router.get("/:id", destinationController.getDestinationDetails);
 router
   .route("/")
   .post(destinationController.createDestination)

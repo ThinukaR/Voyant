@@ -1,10 +1,10 @@
 const express = require("express");
-const router = express.router;
+const router = express.Router();
 const userGroupController = require("../controllers/userGroupController");
 
 // Routes
 router
-  .route("/id:")
+  .route("/:id")
   .post(userGroupController.createGroup)
   .get(userGroupController.getAllGroups);
 

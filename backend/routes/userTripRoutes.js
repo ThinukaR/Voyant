@@ -1,5 +1,5 @@
 const express = require("express");
-const router = express.router;
+const router = express.Router();
 const userTripController = require("../controllers/userTripsController");
 
 // Routes
@@ -9,6 +9,6 @@ router
   .get(userTripController.getAllTrips);
 
 router
-  .route("/id:")
+  .route("/:id")
   .get(userTripController.getTripById)
   .get(userTripController.getAllUserTrips);
