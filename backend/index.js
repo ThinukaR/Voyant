@@ -1,3 +1,5 @@
+// Imports
+require('dotenv').config();
 const express = require('express');
 const connectToDatabase = require('./db');
 const avatarRoutes = require('./routes/avatarRoutes');
@@ -12,6 +14,7 @@ const userTripRoutes = require('./routes/userTripRoutes');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Routes
 app.use(express.json());
 app.use('/api/user-account-details', userAccountDetailsRoutes);
 app.use('/api/avatars', avatarRoutes);
