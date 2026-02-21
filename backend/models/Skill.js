@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 
-const skillSchema = new mongoose.Schema ({
+const skillSchema = new mongoose.Schema({
   skillId: {
     type: Number,
     required: true,
@@ -9,7 +9,7 @@ const skillSchema = new mongoose.Schema ({
   classId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "SkillClass",
-    required: [true,"Every skill must belong to a class"],
+    required: [true, "Every skill must belong to a class"],
   },
   name: {
     type: String,

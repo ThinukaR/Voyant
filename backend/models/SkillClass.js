@@ -12,10 +12,10 @@ const skillClassSchema = new mongoose.Schema({
   },
   skillsArray: {
     type: [mongoose.Schema.Types.ObjectId],
-    ref: 'Skill'
+    ref: "Skill",
   },
 });
 
-const Skill_Class = mongoose.model("Skill Class", skillClassSchema);
+const Skill_Class = mongoose.model("SkillClass", skillClassSchema);
 
 module.exports = Skill_Class;
