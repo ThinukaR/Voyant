@@ -13,3 +13,4 @@ router
   .get(skillController.getSkill)
   .patch(skillController.updateSkill)
   .delete(skillController.deleteSkill);
+module.exports = router;

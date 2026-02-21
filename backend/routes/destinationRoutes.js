@@ -8,3 +8,4 @@ router
   .route("/")
   .post(destinationController.createDestination)
   .get(destinationController.getAllDestinations);
+module.exports = router;

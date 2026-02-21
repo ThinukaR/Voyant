@@ -12,3 +12,4 @@ router
 router.get("/:id", userTripController.getTripById);
 
 router.get("/:id", userTripController.getAllUserTrips);
+module.exports = router;

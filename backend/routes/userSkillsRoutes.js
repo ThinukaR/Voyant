@@ -15,3 +15,4 @@ router
   .delete(userSkillController.removeUserSkill);
 
 router.patch("/:id", userSkillController.updateUserSkillLevel);
+module.exports = router;

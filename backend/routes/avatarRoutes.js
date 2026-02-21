@@ -15,3 +15,4 @@ router
   .route("/")
   .post(avatarController.createAvatar)
   .get(avatarController.getAllAvatars);
+module.exports = router;

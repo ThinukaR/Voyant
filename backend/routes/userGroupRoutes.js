@@ -8,9 +8,6 @@ router
   .post(userGroupController.createGroup)
   .get(userGroupController.getAllGroups);
 
-router
-  .route("/:id")
-  .get(userGroupController.getGroupById);
-router
-  .route("/user/:userId")
-  .get(userGroupController.getUserGroups);
+router.route("/:id").get(userGroupController.getGroupById);
+router.route("/user/:userId").get(userGroupController.getUserGroups);
+module.exports = router;
