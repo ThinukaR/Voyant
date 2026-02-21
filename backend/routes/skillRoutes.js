@@ -11,4 +11,5 @@ router
 router
   .route("/:id")
   .get(skillController.getSkill)
-  .patch(skillController.updateSkill);
+  .patch(skillController.updateSkill)
+  .delete(skillController.deleteSkill);

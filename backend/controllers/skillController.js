@@ -75,3 +75,13 @@ exports.updateSkill = async (req, res) => {
     });
   }
 };
+
+exports.deleteSkill = async (req, res) => {
+  try {
+    const doc = await Skill.findByIdAndDelete(req.params.id);
+    if (!doc) return res.status(404).json({ message: "Not found" });
+    return res.status(204).send();
+  } catch (err) {
+    return res.status(400).json({ message: err.message });
+  }
+};
