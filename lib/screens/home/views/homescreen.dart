@@ -10,6 +10,8 @@ class Homescreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: const Map(),
+      // Add a button to go to class selection screen
+      
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           // Dispatch the logout event
