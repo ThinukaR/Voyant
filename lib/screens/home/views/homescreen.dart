@@ -27,6 +27,8 @@ class Homescreen extends StatelessWidget {
         ],
       ),
       body: const Map(),
+      // Add a button to go to class selection screen
+      
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           // Dispatch the logout event

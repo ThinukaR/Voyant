@@ -73,7 +73,7 @@ class FirebaseUserRepo implements UserRepository {
 
       // Save the user immediately to Firestore
       await setUserData(myUser);
-
+      
       return myUser;
     } catch (e) {
       debugPrint("❌ SignUp Error: $e");
