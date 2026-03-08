@@ -1,0 +1,44 @@
+name: Flutter CD
+
+on:
+  push:
+    branches: [ main ]   # Only deploy from main branch
+
+jobs:
+  build-and-deploy:
+    name: Build APK & Deploy to Firebase
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build release APK
+        run: flutter build apk --release
+
+      # Save the APK as a downloadable artifact in GitHub
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+      # Distribute to testers via Firebase App Distribution
+      - name: Deploy to Firebase App Distribution
+        uses: wzieba/Firebase-Distribution-Github-Action@v1
+        with:
+          appId: ${{ secrets.FIREBASE_APP_ID }}
+          token: ${{ secrets.FIREBASE_TOKEN }}
+          groups: testers                 # Tester group name from Firebase console
+          file: build/app/outputs/flutter-apk/app-release.apk
+          releaseNotes: "Build from commit: ${{ github.sha }}"
