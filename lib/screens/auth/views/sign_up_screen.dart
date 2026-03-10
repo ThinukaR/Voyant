@@ -130,9 +130,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       text: "Sign Up",
                       onPressed: () {
                         if (_formKey.currentState!.validate()) {
-                          MyUser myUser = MyUser.empty;
-                          myUser.email = emailController.text;
-                          myUser.username = nameController.text;
+                          final myUser = MyUser(
+                            userId: '',
+                            email: emailController.text,
+                            username: nameController.text,
+                          );  
                           context.read<SignUpBloc>().add(SignUpRequired(myUser, passwordController.text));
                         }
                       },
