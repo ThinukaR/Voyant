@@ -36,3 +36,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
+// Section for user's name and pfp 
+class HeadSection extends StatelessWidget {
+  const HeadSection({super.key});
+}
+
+@override
+Widget build(BuildContext context) {
+  final authState = context.watch<AuthenticationBloc>().state;
+  final user = authState.user;
+
+  //if the user's username is empty or not set, the placeholder will be Voyager
+  final usernameDisplay = user?.username.isEmpty ?? true ? 'Voyager' : user?.username;
+
+  return Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color:  Color(0xFF12121A),
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(
+        color: Colors.white.withOpacity(0.1),
+      ),
+      child: Row(
+        children: [ const CircleAvatar( //Circle avatar widget to create the users profile picture
+          radius: 25,
+          backgroundColor: Colors.deepPurpleAccent,
+          child: Icon(Icons.person, color: Colors.white),
+         )
+        const SizedBox(width: 16),
+          Expanded(child: Column //prevents issues that can pop up when too much text is added 
+          (
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                usernameDisplay,
+                style: const TextStyle (fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white )
+                ),
+                const Text('I am new here !', style: TextStyle(color: Colors.white, fontSize: 14)),
+            ],
+          )
+          )
+      ],
+      )
+  )
+  );
+}
