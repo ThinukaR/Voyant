@@ -12,7 +12,7 @@ class HomeTab extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            childern: [
+            children: [
               _buildHeader(),
               const SizedBox(height: 24),
               _buildXPCard(),
@@ -20,8 +20,6 @@ class HomeTab extends StatelessWidget {
               _buildStatsRow(),
               const SizedBox(height: 24),
               _buildActiveTrip(),
-              const SizedBox(height: 24),
-              _buildRecentQuests(),
             ],
           ),
         ),
@@ -32,10 +30,10 @@ class HomeTab extends StatelessWidget {
   Widget _buildHeader() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      childern: [
+      children: [
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          childern: [
+          children: [
             Text(
               'Welcome back,',
               style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
@@ -110,33 +108,155 @@ class HomeTab extends StatelessWidget {
               ),
             ],
           ),
+          const SizedBox(height: 8),
+          const Text(
+            '2,450 XP',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          // xp progress bar
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: 0.65,
+              minHeight: 8,
+              backgroundColor: Colors.white12,
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                Color(0xFFB020DD),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            '550 XP to Level 8',
+            style: TextStyle(color: Colors.white54, fontSize: 12),
+          ),
         ],
       ),
-      const SizedBox(height: 8),
-      const Text(
-        '2,450 XP',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 32,
-          fontWeight: FontWeight.bold,
+    );
+  }
+
+  Widget _buildStatsRow() {
+    return Row(
+      children: [
+        _buildStatCard('Quests', '12', Icons.flag, Colors.orange),
+        const SizedBox(width: 12),
+        _buildStatCard('Trips', '3', Icons.luggage, const Color(0xFFB020DD)),
+        const SizedBox(width: 12),
+        _buildStatCard('Badges', '8', Icons.military_tech, Colors.amber),
+      ],
+    );
+  }
+
+  Widget _buildStatCard(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF12121A),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Color(0xFF1A0A2E)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              label,
+              style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+            ),
+          ],
         ),
       ),
-      const SizedBox(height: 12),
-      // xp progress bar
-      ClipRRect(
-        borderRadius: BorderRadius.circular(10),
-        child: LinearProgressIndicator(
-          value: 0.65,
-          minHeight: 8,
-          backgroundColor: Colors.white12,
-          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFB020DD)),
+    );
+  }
+
+  Widget _buildActiveTrip() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Active Trip',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-      ),
-      const SizedBox(height: 8),
-      const Text(
-        '550 XP to Level 8',
-        style: TextStyle(color: Colors.white54, fontSize: 12),
-      ),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF12121A),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFB020DD)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Colombo Explorer',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'Active',
+                      style: TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: LinearProgressIndicator(
+                  value: 0.4,
+                  minHeight: 6,
+                  backgroundColor: Colors.white12,
+                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '4/10 quests completed',
+                style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
