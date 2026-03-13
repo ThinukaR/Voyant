@@ -520,7 +520,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen>
 
                 const SizedBox(height: 20),
 
-                // ── Home / back button ─────────────────────────
+                // ── Home / back button(May remove this later) ─────────────────────────
                 AnimatedBuilder(
                   animation: _glowAnimation,
                   builder: (_, __) => GestureDetector(
