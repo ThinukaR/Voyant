@@ -64,6 +64,28 @@ class TripDetailScreen extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+                  const SizedBox(width: 15),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.green.withOpacity(0.5),
+                          ),
+                        ),
+                        child: const Text(
+                          'Active',
+                          style: TextStyle(color: Colors.green, fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -217,14 +239,50 @@ class TripDetailScreen extends StatelessWidget {
               ),
             ),
 
-            const Spacer(),
-
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF551161), Color(0xFF1A0A2E)],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: const Color(0xFFB020DD).withOpacity(0.4),
+                  ),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Total XP Reward',
+                      style: TextStyle(color: Colors.white70, fontSize: 14),
+                    ),
+                    Text(
+                      '1,200 XP',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            SizedBox(height: 50),
             // NAVIGATION LINKS
-            _buildNavigationRow("Quests", "View all active quests"),
-            const Divider(height: 1, thickness: 1),
-
-            _buildNavigationRow("Tasks", "Check off your daily items"),
-            const Divider(height: 1, thickness: 1),
+            SizedBox(
+              width: double.infinity,
+              child: _buildNavigationRow("Quests", "View all active quests"),
+            ),
+            const Divider(height: 1, thickness: 0),
+            SizedBox(
+              width: double.infinity,
+              child: _buildNavigationRow("Tasks", "Check off your daily items"),
+            ),
           ],
         ),
       ),
@@ -246,6 +304,7 @@ class TripDetailScreen extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
+                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 4),
