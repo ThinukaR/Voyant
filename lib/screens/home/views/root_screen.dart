@@ -13,23 +13,23 @@ class RootScreen extends StatefulWidget {
 class _RootScreenState extends State<RootScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = [
-    const HomeTab(),
-    const TripsTab(),
-    const Map(),
-    const Center(
-      child: Text("Inventory", style: TextStyle(color: Colors.white)),
-    ),
-    const Center(
-      child: Text("Avatar", style: TextStyle(color: Colors.white)),
-    ),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final List<Widget> screens = [
+      HomeTab(onTripsTap: () => setState(() => _currentIndex = 1)),
+      const TripsTab(),
+      const Map(),
+      const Center(
+        child: Text("Inventory", style: TextStyle(color: Colors.white)),
+      ),
+      const Center(
+        child: Text("Avatar", style: TextStyle(color: Colors.white)),
+      ),
+    ];
+
     return Scaffold(
       backgroundColor: const Color(0xFF0A0A0F),
-      body: _screens[_currentIndex],
+      body: screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
