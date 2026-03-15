@@ -112,7 +112,6 @@ class FirebaseUserRepo implements UserRepository {
     }
   }
 
-  @override
   Future<void> deleteAccount() async {
     try {
       final user = _firebaseAuth.currentUser;
@@ -126,7 +125,6 @@ class FirebaseUserRepo implements UserRepository {
     }
   }
 
-  @override
   Future<void> updateEmail(String newEmail) async {
     try {
       await _firebaseAuth.currentUser?.updateEmail(newEmail);
@@ -136,7 +134,6 @@ class FirebaseUserRepo implements UserRepository {
     }
   }
 
-  @override
   Future<void> updatePassword(String newPassword) async {
     try {
       await _firebaseAuth.currentUser?.updatePassword(newPassword);

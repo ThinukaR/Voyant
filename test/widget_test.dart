@@ -13,7 +13,7 @@ import 'package:voyant/blocs/authentication_bloc/authentication_bloc.dart';
 
 void main() {
   testWidgets('App smoke test', (WidgetTester tester) async {
-    await tester.pumpWidget(MyApp(FirebaseUserRepository()));
+    await tester.pumpWidget(MyApp(FirebaseUserRepo()));
 
     expect(find.byType(MaterialApp), findsOneWidget);
   });
