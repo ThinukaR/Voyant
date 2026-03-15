@@ -1,0 +1,16 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    //Rule for Business Integration 
+    //This checks first if the user is logged in 
+    //Then it checks if the document being accessed belongs to the user 
+    //Finally will make sure that only business partners can do this 
+    match /quest_partner_data/{userId} {
+      allow read: if request.auth != null
+                  && request.auth.uid == userId
+                  && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isBusinessPartner', false) == true;
+      allow write: if false; //Makes it so that only admins can write , the default permission is just reading 
+    }
+  }
+}
