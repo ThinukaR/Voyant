@@ -153,6 +153,37 @@ class _RewardScreenState extends State<RewardScreen>
     });
   }
 
+ void _animateProgress() {
+    final duration = const Duration(milliseconds: 1500);
+    final steps = 60;
+    final stepTime = duration.inMilliseconds ~/ steps;
+
+    //calculation to see how much the bar should increase per step 
+    double increment = (widget.endProgress - widget.startProgress) / steps;
+
+  //repeating timer 
+    Timer.periodic(Duration(milliseconds: stepTime), (timer) { 
+      setState(() {
+        _currentProgress += increment;
+      });
+
+      if (_currentProgress >= widget.endProgress) {
+        _currentProgress = widget.endProgress;
+        timer.cancel();
+      }
+    });
+  }
+
+  @override
+  //to stop any memory leaks that could happen 
+  void dispose() {
+    _cosmeticDropController.dispose();
+    _expBarController.dispose();
+    super.dispose();
+  }
+
+
+
   
 
 
