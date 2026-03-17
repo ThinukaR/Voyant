@@ -1,28 +1,47 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const taskSchema = new mongoose.Schema({
-    taskId: {
-        type: Number,
-        required: true,
-        unique: true
-    },
-    name: {
-        type: String,
-        required: true,
-        trim: true
-    },
-    quest: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Quest",
-        required: [true, "A task must belong to a quest"],
-    },
-    achievements: {
-        type: String,
-        required: [true, 'A task must provide achievements or xp']
-    } 
+  title: { type: String, required: true },
+  description: { type: String },
+  order: { type: Number, required: true },
+  isLocked: { type: Boolean, default: true },
+  isCompleted: { type: Boolean, default: false },
+  xpReward: { type: Number, default: 50 },
+  type: {
+    type: String,
+    enum: [
+      "geofence",
+      "number_input",
+      "photo",
+      "spot_diff",
+      "find_object",
+      "checkin",
+    ],
+    required: true,
+  },
+  geofenceData: {
+    coordinates: [Number],
+    radiusMeters: Number,
+  },
+  numberInputData: {
+    question: String,
+    correctAnswer: Number,
+  },
+  photoData: {
+    instruction: String,
+    aiPrompt: String,
+  },
+  spotDiffData: {
+    imageAUrl: String,
+    imageBUrl: String,
+    instruction: String,
+  },
+  findObjectData: {
+    hint: String,
+    objectName: String,
+    imageUrl: String,
+  },
 });
 
-
-const Task = mongoose.model('Task', taskSchema);
-
-module.exports = Task;
+// exporting the schema without a model, tasks will be embedded inside a quest document. Not a seperation collection in mongodb
+module.exports = taskSchema;
