@@ -63,6 +63,7 @@ class RewardRepository {
   }
 }
 
+//main Ui setup 
 class RewardScreen extends StatefulWidget {
   final String questName;
   final String rewardName;
@@ -91,5 +92,43 @@ class RewardScreen extends StatefulWidget {
   State<RewardScreen> createState() => _RewardScreenState();
 }
 
+
+//animations 
+class _RewardScreenState extends State<RewardScreen>
+    with TickerProviderStateMixin {
+  late AnimationController _cosmeticDropController;
+  late AnimationController _expBarController;
+  late Animation<double> _cosmeticDropAnimation;
+  late Animation<double> _expBarAnimation;
+  late Animation<double> _glowAnimation;
+  double _currentProgress = 0.0;
+
+  @override
+  void initState() {
+    super.initState();
+
+    //drop animation for the reward ( can be cosmetic or token)
+    _cosmeticDropController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _cosmeticDropAnimation = Tween<double>( //drops from top 
+      begin: -50.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _cosmeticDropController,
+      curve: Curves.bounceOut,
+    ));
+
+    // Glow animation 
+    _glowAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _cosmeticDropController,
+      curve: const Interval(0.5, 1.0, curve: Curves.easeInOut),
+    ));
+  }
+    }
 
 
