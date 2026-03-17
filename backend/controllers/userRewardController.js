@@ -172,12 +172,11 @@ exports.markRewardAsViewed = async (req, res) => {
   }
 };
 
-// Get reward statistics
+// Reward stats
 exports.getRewardStats = async (req, res) => {
   try {
     const userId = req.params.userId;
     
-    // Get basic stats
     const basicStats = await UserReward.aggregate([
       { $match: { userId } },
       {
@@ -194,8 +193,8 @@ exports.getRewardStats = async (req, res) => {
       }
     ]);
     
-    // Get recent unlocks (separate query)
-    const recentUnlocks = await UserReward.find({ userId })
+    
+    const recentUnlocks = await UserReward.find({ userId }) //recent unlocks 
       .populate('rewardId')
       .sort({ unlockedAt: -1 })
       .limit(5)
@@ -215,7 +214,7 @@ exports.getRewardStats = async (req, res) => {
   }
 };
 
-// Get favorite rewards
+// Favorite rewards - users can favourite their unlocked rewards or tokens to have them in their favourites list 
 exports.getFavoriteRewards = async (req, res) => {
   try {
     const favorites = await UserReward.find({
@@ -245,7 +244,7 @@ exports.addToFavorites = async (req, res) => {
     );
     
     if (!userReward) {
-      return res.status(404).json({ message: "User reward not found" });
+      return res.status(404).json({ message: "Reward not found" });
     }
     
     res.json({
