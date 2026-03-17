@@ -128,7 +128,31 @@ class _RewardScreenState extends State<RewardScreen>
       parent: _cosmeticDropController,
       curve: const Interval(0.5, 1.0, curve: Curves.easeInOut),
     ));
+  
+   // animation for exp bar
+    _expBarController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    );
+    _expBarAnimation = Tween<double>(
+      begin: widget.startProgress,
+      end: widget.endProgress,
+    ).animate(CurvedAnimation(
+      parent: _expBarController,
+      curve: Curves.easeInOut,
+    ));
+
+    _currentProgress = widget.startProgress;
+
+    _cosmeticDropController.forward();
+    
+    // starting exp bar animation after reward drops 
+    Future.delayed(const Duration(milliseconds: 600), () {
+      _expBarController.forward();
+      _animateProgress();
+    });
   }
-    }
+
+  
 
 
