@@ -23,7 +23,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
     super.dispose();
   }
 
-  // ── Logic (unchanged from original) ───────────────────────
+  // ── Logic ──────────────────────────────────────────────────
 
   void _addMember() {
     if (_isFull) return;
@@ -59,8 +59,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
           ),
           backgroundColor: const Color(0xFF7C3AED),
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12)),
         ),
       );
       return;
@@ -73,8 +73,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         ),
         backgroundColor: const Color(0xFF6C63FF),
         behavior: SnackBarBehavior.floating,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12)),
       ),
     );
     setState(() {
@@ -94,16 +94,16 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Header ────────────────────────────────────
+            // ── Header ──────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 28, 24, 0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Column(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                    children: const [
                       Text(
                         'Create your',
                         style: TextStyle(
@@ -124,7 +124,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                       ),
                     ],
                   ),
-                  // Live member count badge
+                  // Live member count badge — rebuilds with setState
                   Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 14, vertical: 6),
@@ -147,14 +147,14 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
 
             const SizedBox(height: 28),
 
-            // ── Scrollable content ─────────────────────────
+            // ── Scrollable content ───────────────────────────
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // ── Info card ────────────────────────────
+                    // ── Info card ──────────────────────────
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
@@ -187,10 +187,10 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                             ),
                           ),
                           const SizedBox(width: 16),
-                          const Expanded(
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
+                              children: const [
                                 Text(
                                   'New Group',
                                   style: TextStyle(
@@ -216,7 +216,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
 
                     const SizedBox(height: 24),
 
-                    // ── Group Size ───────────────────────────
+                    // ── Group Size ─────────────────────────
                     const Text(
                       'Group Size',
                       style: TextStyle(
@@ -265,7 +265,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
 
                     const SizedBox(height: 24),
 
-                    // ── Members ──────────────────────────────
+                    // ── Members label + status pill ─────────
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -284,7 +284,8 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                               horizontal: 10, vertical: 3),
                           decoration: BoxDecoration(
                             color: _isFull
-                                ? const Color(0xFF7C3AED).withValues(alpha: 0.2)
+                                ? const Color(0xFF7C3AED)
+                                    .withValues(alpha: 0.2)
                                 : const Color(0xFF2D2550),
                             borderRadius: BorderRadius.circular(20),
                           ),
@@ -304,7 +305,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
 
                     const SizedBox(height: 10),
 
-                    // ── Add member row ───────────────────────
+                    // ── Add member row ─────────────────────
                     Row(
                       children: [
                         Expanded(
@@ -351,6 +352,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                           ),
                         ),
                         const SizedBox(width: 10),
+                        // Add button
                         GestureDetector(
                           onTap: _isFull ? null : _addMember,
                           child: AnimatedContainer(
@@ -393,7 +395,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
 
                     const SizedBox(height: 16),
 
-                    // ── Member list ──────────────────────────
+                    // ── Member list ────────────────────────
                     if (_members.isEmpty)
                       Container(
                         height: 110,
@@ -405,10 +407,10 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                             width: 1,
                           ),
                         ),
-                        child: const Center(
+                        child: Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
+                            children: const [
                               Icon(
                                 Icons.person_add_alt_1_outlined,
                                 color: Color(0xFF2D2550),
@@ -440,14 +442,13 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                         ),
                       ),
 
-                    // Bottom padding so content clears the button
                     const SizedBox(height: 32),
                   ],
                 ),
               ),
             ),
 
-            // ── Create Group button ────────────────────────
+            // ── Create Group button ──────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
               child: GestureDetector(
@@ -466,9 +467,9 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                     ],
                   ),
                   alignment: Alignment.center,
-                  child: const Row(
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
+                    children: const [
                       Icon(Icons.group_add_rounded,
                           color: Colors.white, size: 20),
                       SizedBox(width: 10),
@@ -532,7 +533,7 @@ class _MemberTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Avatar — rounded square matching class card style
+          // Avatar
           Container(
             width: 36,
             height: 36,
