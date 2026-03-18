@@ -12,6 +12,7 @@ const taskSchema = new mongoose.Schema({
     enum: [
       "geofence",
       "number_input",
+      "string_input",
       "photo",
       "spot_diff",
       "find_object",
@@ -26,6 +27,10 @@ const taskSchema = new mongoose.Schema({
   numberInputData: {
     question: String,
     correctAnswer: Number,
+  },
+  stringInputData: {
+    instruction: String,
+    correctAnswer: String,
   },
   photoData: {
     instruction: String,
