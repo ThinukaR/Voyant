@@ -52,8 +52,10 @@ class _AvatarScreenState extends State<AvatarScreen> {
                   backgroundColor: Colors.red,
                 ),
               );
-            } else if (state.status == AvatarStatus.success &&
-                state.currentAvatar != null) {
+            }
+            
+            // Only show success snackbar when save completes
+            if (state.showSaveSuccess) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Avatar saved successfully!'),

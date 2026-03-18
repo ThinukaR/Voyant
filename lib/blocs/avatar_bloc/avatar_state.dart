@@ -8,6 +8,7 @@ class AvatarState extends Equatable {
   final Avatar? currentAvatar;
   final Avatar? draftAvatar;
   final String? errorMessage;
+  final bool showSaveSuccess;
 
   const AvatarState({
     this.status = AvatarStatus.initial,
@@ -15,6 +16,7 @@ class AvatarState extends Equatable {
     this.currentAvatar,
     this.draftAvatar,
     this.errorMessage,
+    this.showSaveSuccess = false,
   });
 
   AvatarState copyWith({
@@ -23,6 +25,7 @@ class AvatarState extends Equatable {
     Avatar? currentAvatar,
     Avatar? draftAvatar,
     String? errorMessage,
+    bool? showSaveSuccess,
   }) {
     return AvatarState(
       status: status ?? this.status,
@@ -30,10 +33,11 @@ class AvatarState extends Equatable {
       currentAvatar: currentAvatar ?? this.currentAvatar,
       draftAvatar: draftAvatar ?? this.draftAvatar,
       errorMessage: errorMessage ?? this.errorMessage,
+      showSaveSuccess: showSaveSuccess ?? this.showSaveSuccess,
     );
   }
 
   @override
   List<Object?> get props =>
-      [status, avatars, currentAvatar, draftAvatar, errorMessage];
+      [status, avatars, currentAvatar, draftAvatar, errorMessage, showSaveSuccess];
 }

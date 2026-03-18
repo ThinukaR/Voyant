@@ -191,6 +191,7 @@ class AvatarBloc extends Bloc<AvatarEvent, AvatarState> {
           currentAvatar: savedAvatar,
           draftAvatar: savedAvatar,
           errorMessage: null,
+          showSaveSuccess: true,
         ));
       } catch (e) {
         emit(state.copyWith(
