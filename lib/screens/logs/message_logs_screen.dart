@@ -214,7 +214,7 @@ with TickerProviderStateMixin {
 
 
     //Dynamic colors and icons //
-    
+
     Color _getMessageTypeColor(String messageType) {
         switch (messageType) {
         case 'hint':
@@ -244,3 +244,71 @@ with TickerProviderStateMixin {
             return Icons.info;
         }
     }
+
+@override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF1B0330),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF4A148C),
+        elevation: 0,
+        title: const Text(
+          'Message Logs',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+
+        actions: [
+        //shows unread count in red if there are unread messages 
+          if (_unreadCount > 0)
+            Padding(
+              padding: const EdgeInsets.only(right: 16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '$_unreadCount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          IconButton( 
+            //mark all as read
+            icon: const Icon(Icons.mark_email_read, color: Colors.white),
+            onPressed: _markAllAsRead,
+          ),
+        ],
+        bottom: TabBar(
+            //keeps the active bar as white while the innactive bar is a more faded white ( 70 applied for now )
+          controller: _tabController,
+          indicatorColor: Colors.white,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          tabs: const [
+            Tab(text: 'All'),
+            Tab(text: 'Hints'),
+            Tab(text: 'Quests'),
+            Tab(text: 'Rewards'),
+          ],
+        ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildMessagesList('all'),
+          _buildMessagesList('hint'),
+          _buildMessagesList('quest_update'),
+          _buildMessagesList('reward'),
+        ],
+      ),
+    );
+  }
