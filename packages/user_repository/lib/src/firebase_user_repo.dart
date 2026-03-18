@@ -104,9 +104,11 @@ class FirebaseUserRepo implements UserRepository {
           "📝 setUserData: Writing user document for UID: ${myUser.userId}");
       debugPrint(
           "📝 setUserData: User data: ${myUser.toEntity().toDocument()}");
-      await usersCollection
-          .doc(myUser.userId)
-          .set(myUser.toEntity().toDocument(), SetOptions(merge: true));
+      await usersCollection.doc(myUser.userId).set({
+        ...myUser.toEntity().toDocument(),
+        'totalXP': 0,
+        'level': 1,
+      }, SetOptions(merge: true));
       debugPrint("✅ setUserData: Successfully wrote document to Firestore");
     } catch (e, stackTrace) {
       debugPrint("❌ SetUserData Error: $e");
