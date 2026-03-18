@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:voyant/widgets/animated_gradient_background.dart';
+import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:voyant/screens/trips/views/trip_screen.dart';
-import 'package:voyant/screens/quest/views/quests_list_screen.dart';
+import 'package:voyant/widgets/animated_gradient_background.dart';
 
 class TripsTab extends StatefulWidget {
   const TripsTab({super.key});
@@ -11,28 +13,48 @@ class TripsTab extends StatefulWidget {
 }
 
 class _TripsTabState extends State<TripsTab> {
-  final List<Map<String, dynamic>> trips = [
-    {
-      'title': 'Colombo Explorer',
-      'location': 'Colombo, Sri Lanka',
-      'progress': 0.4,
-      'questsDone': 4,
-      'totalQuests': 10,
-      'status': 'Active',
-      'statusColor': Colors.green,
-      'icon': '🏙️',
-    },
-    {
-      'title': 'Galle Fort Adventure',
-      'location': 'Galle, Sri Lanka',
-      'progress': 0.85,
-      'questsDone': 17,
-      'totalQuests': 20,
-      'status': 'In Progress',
-      'statusColor': Colors.orange,
-      'icon': '🏯',
-    },
-  ];
+  static const String baseUrl = 'http://10.0.2.2:3000/api';
+
+  List<dynamic> trips = [];
+  bool isLoading = true;
+  String? error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTrips();
+  }
+
+  Future<String?> _getToken() async {
+    return await FirebaseAuth.instance.currentUser?.getIdToken();
+  }
+
+  Future<void> _loadTrips() async {
+    try {
+      final token = await _getToken();
+      final response = await http.get(
+        Uri.parse('$baseUrl/user-trips'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          trips = jsonDecode(response.body);
+          isLoading = false;
+        });
+      } else {
+        setState(() {
+          error = 'Failed to load trips';
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        error = 'Connection error: $e';
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,13 +76,33 @@ class _TripsTabState extends State<TripsTab> {
                 ),
               ),
               Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: trips.length,
-                  itemBuilder: (context, index) {
-                    return _buildTripCard(trips[index]);
-                  },
-                ),
+                child: isLoading
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          color: Color(0xFFB020DD),
+                        ),
+                      )
+                    : error != null
+                    ? Center(
+                        child: Text(
+                          error!,
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      )
+                    : trips.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'No trips yet',
+                          style: TextStyle(color: Colors.white54),
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: trips.length,
+                        itemBuilder: (context, index) {
+                          return _buildTripCard(trips[index]);
+                        },
+                      ),
               ),
             ],
           ),
@@ -74,7 +116,10 @@ class _TripsTabState extends State<TripsTab> {
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const TripDetailScreen()),
+          MaterialPageRoute(
+            builder: (context) =>
+                TripDetailScreen(tripId: trip['_id'], tripName: trip['name']),
+          ),
         );
       },
       child: Container(
@@ -90,14 +135,14 @@ class _TripsTabState extends State<TripsTab> {
           children: [
             Row(
               children: [
-                Text(trip['icon'], style: const TextStyle(fontSize: 32)),
+                const Text('🏯', style: TextStyle(fontSize: 32)),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        trip['title'],
+                        trip['name'] ?? '',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 18,
@@ -105,7 +150,7 @@ class _TripsTabState extends State<TripsTab> {
                         ),
                       ),
                       Text(
-                        trip['location'],
+                        '${trip['xpGained']} XP gained',
                         style: TextStyle(
                           color: Colors.grey.shade400,
                           fontSize: 13,
@@ -120,57 +165,17 @@ class _TripsTabState extends State<TripsTab> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: (trip['statusColor'] as Color).withOpacity(0.15),
+                    color: Colors.green.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: (trip['statusColor'] as Color).withOpacity(0.5),
-                    ),
+                    border: Border.all(color: Colors.green.withOpacity(0.5)),
                   ),
-                  child: Text(
-                    trip['status'],
+                  child: const Text(
+                    'Active',
                     style: TextStyle(
-                      color: trip['statusColor'],
+                      color: Colors.green,
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                     ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: LinearProgressIndicator(
-                value: trip['progress'],
-                minHeight: 6,
-                backgroundColor: Colors.white12,
-                valueColor: AlwaysStoppedAnimation<Color>(trip['statusColor']),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const QuestsListScreen(),
-                      ),
-                    );
-                  },
-                  child: Text(
-                    '${trip['questsDone']}/${trip['totalQuests']} quests',
-                    style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
-                  ),
-                ),
-                Text(
-                  '${(trip['progress'] * 100).toInt()}%',
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ],

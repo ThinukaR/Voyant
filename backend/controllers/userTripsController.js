@@ -20,11 +20,7 @@ exports.createTrip = async (req, res) => {
 exports.getAllTrips = async (req, res) => {
   try {
     const userTrips = await UserTripData.find();
-    res.status(200).json({
-      status: "success",
-      results: userTrips.length,
-      data: { trips: userTrips },
-    });
+    res.status(200).json(userTrips);
   } catch (err) {
     res.status(400).json({
       status: "fail",

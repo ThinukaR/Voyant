@@ -1,18 +1,85 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:voyant/screens/quest/views/quests_list_screen.dart';
 import 'package:voyant/widgets/animated_gradient_background.dart';
 
-class TripDetailScreen extends StatelessWidget {
-  const TripDetailScreen({super.key});
+class TripDetailScreen extends StatefulWidget {
+  final String tripId;
+  final String tripName;
+  const TripDetailScreen({
+    super.key,
+    required this.tripId,
+    required this.tripName,
+  });
+
+  @override
+  State<TripDetailScreen> createState() => _TripDetailScreenState();
+}
+
+class _TripDetailScreenState extends State<TripDetailScreen> {
+  static const String baseUrl = 'http://10.0.2.2:3000/api';
+
+  List<dynamic> quests = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTripData();
+  }
+
+  Future<String?> _getToken() async {
+    return await FirebaseAuth.instance.currentUser?.getIdToken();
+  }
+
+  Future<void> _loadTripData() async {
+    try {
+      final token = await _getToken();
+      final response = await http.get(
+        Uri.parse('$baseUrl/quests/trip/${widget.tripId}'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        setState(() {
+          quests = jsonDecode(response.body);
+          isLoading = false;
+        });
+      } else {
+        setState(() => isLoading = false);
+      }
+    } catch (e) {
+      setState(() => isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    // calculate stats from real quest data
+    final totalQuests = quests.length;
+    final completedQuests = quests
+        .where((q) => q['userStatus'] == 'completed')
+        .length;
+    final totalTasks = quests.fold<int>(
+      0,
+      (sum, q) => sum + ((q['tasks'] as List?)?.length ?? 0),
+    );
+    final completedTasks = quests.fold<int>(
+      0,
+      (sum, q) => sum + ((q['tasksCompleted'] as int?) ?? 0),
+    );
+    final totalXP = quests.fold<int>(
+      0,
+      (sum, q) => sum + ((q['totalXP'] as int?) ?? 0),
+    );
+    final progress = totalQuests == 0 ? 0.0 : completedQuests / totalQuests;
+
     return Scaffold(
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 1, // highlights Trips tab since we came from there
-        onTap: (index) {
-          Navigator.pop(context); // go back first
-        },
+        currentIndex: 1,
+        onTap: (index) => Navigator.pop(context),
         backgroundColor: const Color(0xFF12121A),
         selectedItemColor: const Color(0xFFB020DD),
         unselectedItemColor: Colors.grey.shade600,
@@ -45,7 +112,6 @@ class TripDetailScreen extends StatelessWidget {
                   bottom: BorderSide(color: Colors.white.withOpacity(0.1)),
                 ),
               ),
-
               child: Row(
                 children: [
                   GestureDetector(
@@ -57,246 +123,212 @@ class TripDetailScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 20),
-                  const Text(
-                    'Colombo Explorer',
-                    style: TextStyle(
+                  Text(
+                    widget.tripName,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(width: 15),
-                  Row(
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.green.withOpacity(0.5)),
+                    ),
+                    child: const Text(
+                      'Active',
+                      style: TextStyle(color: Colors.green, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            if (isLoading)
+              const Expanded(
+                child: Center(
+                  child: CircularProgressIndicator(color: Color(0xFFB020DD)),
+                ),
+              )
+            else
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
                     children: [
-                      Container(
+                      // DASHBOARD
+                      Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Row(
+                          children: [
+                            Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                SizedBox(
+                                  height: 180,
+                                  width: 180,
+                                  child: CircularProgressIndicator(
+                                    value: progress,
+                                    strokeWidth: 15,
+                                    backgroundColor: const Color(0xFF1E2A3A),
+                                    valueColor:
+                                        const AlwaysStoppedAnimation<Color>(
+                                          Colors.greenAccent,
+                                        ),
+                                  ),
+                                ),
+                                Column(
+                                  children: [
+                                    Text(
+                                      '${(progress * 100).toInt()}%',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const Text(
+                                      'Progress',
+                                      style: TextStyle(
+                                        color: Colors.white54,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            const SizedBox(width: 40),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildStat(
+                                  Icons.flag,
+                                  Colors.orange,
+                                  'Quests',
+                                  '$completedQuests / $totalQuests',
+                                ),
+                                const SizedBox(height: 16),
+                                _buildStat(
+                                  Icons.task_alt,
+                                  Colors.greenAccent,
+                                  'Tasks',
+                                  '$completedTasks / $totalTasks',
+                                ),
+                                const SizedBox(height: 16),
+                                _buildStat(
+                                  Icons.military_tech,
+                                  Colors.amber,
+                                  'Badges',
+                                  '0 / 0',
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // XP BANNER
+                      Padding(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
+                          horizontal: 20,
+                          vertical: 10,
                         ),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: Colors.green.withOpacity(0.5),
-                          ),
-                        ),
-                        child: const Text(
-                          'Active',
-                          style: TextStyle(color: Colors.green, fontSize: 12),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // DASHBOARD HEADER
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Row(
-                children: [
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      SizedBox(
-                        height: 180,
-                        width: 180,
-                        child: CircularProgressIndicator(
-                          value: 0.6,
-                          strokeWidth: 15,
-                          backgroundColor: const Color(0xFF1E2A3A),
-                          valueColor: const AlwaysStoppedAnimation<Color>(
-                            Colors.greenAccent,
-                          ),
-                        ),
-                      ),
-                      const Column(
-                        children: [
-                          Text(
-                            '60%',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 28,
-                              fontWeight: FontWeight.bold,
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF551161), Color(0xFF1A0A2E)],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: const Color(0xFFB020DD).withOpacity(0.4),
                             ),
                           ),
-                          Text(
-                            'Progress',
-                            style: TextStyle(
-                              color: Colors.white54,
-                              fontSize: 12,
-                            ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Total XP Reward',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              Text(
+                                '$totalXP XP',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 50),
+
+                      // NAVIGATION
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                QuestsListScreen(tripId: widget.tripId),
+                          ),
+                        ),
+                        child: _buildNavigationRow(
+                          "Quests",
+                          "View all active quests",
+                        ),
+                      ),
+                      const Divider(height: 1, thickness: 0),
+                      _buildNavigationRow(
+                        "Tasks",
+                        "Check off your daily items",
                       ),
                     ],
                   ),
-
-                  const SizedBox(width: 40),
-
-                  // Stats panel
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Quests stat
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.flag,
-                            color: Colors.orange,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 8),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Quests',
-                                style: TextStyle(
-                                  color: Colors.white54,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              const Text(
-                                '5 / 8',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      // Tasks stat
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.task_alt,
-                            color: Colors.greenAccent,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 8),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Tasks',
-                                style: TextStyle(
-                                  color: Colors.white54,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              const Text(
-                                '12 / 20',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      // Badges stat
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.military_tech,
-                            color: Colors.amber,
-                            size: 18,
-                          ),
-                          const SizedBox(width: 8),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Badges',
-                                style: TextStyle(
-                                  color: Colors.white54,
-                                  fontSize: 12,
-                                ),
-                              ),
-                              const Text(
-                                '12 / 40',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF551161), Color(0xFF1A0A2E)],
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: const Color(0xFFB020DD).withOpacity(0.4),
-                  ),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Total XP Reward',
-                      style: TextStyle(color: Colors.white70, fontSize: 14),
-                    ),
-                    Text(
-                      '1,200 XP',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
                 ),
               ),
-            ),
-            SizedBox(height: 50),
-            // NAVIGATION LINKS
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const QuestsListScreen(),
-                  ),
-                );
-              },
-              child: SizedBox(
-                width: double.infinity,
-                child: _buildNavigationRow("Quests", "View all active quests"),
-              ),
-            ),
-            const Divider(height: 1, thickness: 0),
-            SizedBox(
-              width: double.infinity,
-              child: _buildNavigationRow("Tasks", "Check off your daily items"),
-            ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildStat(IconData icon, Color color, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, color: color, size: 18),
+        const SizedBox(width: 8),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(color: Colors.white54, fontSize: 12),
+            ),
+            Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 

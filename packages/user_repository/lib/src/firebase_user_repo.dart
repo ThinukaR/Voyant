@@ -1,4 +1,4 @@
- import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:rxdart/rxdart.dart';
@@ -51,8 +51,12 @@ class FirebaseUserRepo implements UserRepository {
         email: email,
         password: password,
       );
+
+      // ADD THIS
+      final token = await _firebaseAuth.currentUser?.getIdToken();
+      debugPrint("TOKEN: $token");
     } catch (e) {
-      debugPrint("❌ SignIn Error: $e");
+      debugPrint("SignIn Error: $e");
       rethrow;
     }
   }
@@ -73,7 +77,7 @@ class FirebaseUserRepo implements UserRepository {
 
       // Save the user immediately to Firestore
       await setUserData(myUser);
-      
+
       return myUser;
     } catch (e) {
       debugPrint("❌ SignUp Error: $e");

@@ -5,7 +5,7 @@ const locationSchema = new mongoose.Schema({
   destinationId: {
     type: Number,
     required: true,
-    unique: true
+    unique: true,
   },
   name: {
     type: String,
@@ -32,15 +32,12 @@ const locationSchema = new mongoose.Schema({
       enum: ["Point"],
     },
     coordinates: {
-      type: [Number],  // [longitude, latitude]
+      type: [Number], // [longitude, latitude]
       required: true,
-    }
+    },
   },
   address: {
     type: String,
-  },
-  rating: {
-    type: Number,
   },
 });
 

@@ -1,9 +1,10 @@
 const express = require("express");
 const router = express.Router();
 const userTripController = require("../controllers/userTripsController");
-const UserSkill = require("../models/UserSkills");
+const protect = require("../middleware/auth");
 
-// Routes
+// router.use(protect);
+
 router
   .route("/")
   .post(userTripController.createTrip)
@@ -11,5 +12,4 @@ router
 
 router.get("/:id", userTripController.getTripById);
 
-router.get("/user/:userId", userTripController.getAllUserTrips);
 module.exports = router;
