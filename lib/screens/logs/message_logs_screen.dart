@@ -312,3 +312,126 @@ with TickerProviderStateMixin {
       ),
     );
   }
+
+
+// message list  
+//this will create the content inside the tabs 
+//will dynamically switch between the different screens 
+  Widget _buildMessagesList(String messageType) {
+    return Column(
+      children: [
+        
+        Expanded( //takes all the space available
+        //loading spinner animation
+          child: _isLoading
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+                //error screen
+              : _error != null
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.error_outline,
+                            size: 64,
+                            color: Colors.white70,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Error loading messages',
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 18,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _error!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: Colors.white54,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton(
+                            onPressed: () => _loadMessages(refresh: true),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF4A148C),
+                              foregroundColor: Colors.white,
+                            ),
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    )
+                    //empty
+                  : _filteredMessages.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.inbox,
+                                size: 64,
+                                color: Colors.white.withOpacity(0.3),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No messages',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.7),
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                        //list 
+                      : NotificationListener<ScrollNotification>(
+                          onNotification: (scrollInfo) {
+                            if (!_isLoading &&
+                                _hasMore &&
+                                //user reached bottom ( detecting bottom)
+                                scrollInfo.metrics.pixels == scrollInfo.metrics.maxScrollExtent) { 
+                              setState(() {
+                                _currentPage++;
+                                _isLoading = true;
+                              });
+                              _loadMessages();
+                            }
+                            return false;
+                          },
+                          child: RefreshIndicator(
+                            onRefresh: () => _loadMessages(refresh: true),
+                            color: Colors.white,
+                            child: ListView.builder(
+                              controller: _scrollController,
+                              padding: const EdgeInsets.all(16),
+                              itemCount: _filteredMessages.length + (_hasMore ? 1 : 0),
+                              itemBuilder: (context, index) {
+                                if (index == _filteredMessages.length && _hasMore) {
+                                  return const Center(
+                                    child: Padding(
+                                      padding: EdgeInsets.all(16),
+                                      child: CircularProgressIndicator( //spinner animation 
+                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white), //possible change later 
+                                      ),
+                                    ),
+                                  );
+                                }
+
+                                final message = _filteredMessages[index];
+                                return _buildMessageCard(message);
+                              },
+                            ),
+                          ),
+                        ),
+        ),
+      ],
+    );
+  }
