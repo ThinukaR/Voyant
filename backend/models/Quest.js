@@ -1,51 +1,31 @@
 const mongoose = require("mongoose");
+const taskSchema = require("./Task");
 
-const questSchema = new mongoose.Schema({
-  questId: {
-    type: Number,
-    required: true,
-    unique: true,
+const questSchema = new mongoose.Schema(
+  {
+    tripId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Trip",
+      required: true,
+    },
+    destinationId: { type: mongoose.Schema.Types.ObjectId, ref: "Destination" },
+    title: { type: String, required: true },
+    description: { type: String },
+    difficulty: {
+      type: String,
+      enum: ["Easy", "Medium", "Hard"],
+      default: "Easy",
+    },
+    totalXP: { type: Number, required: true },
+    mapPosition: {
+      type: { type: String, default: "Point", enum: ["Point"] },
+      coordinates: [Number],
+    },
+    tasks: [taskSchema],
   },
-  name: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  description: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  instructions: {
-    type: String,
-    required: true,
-  },
-  xpCount: {
-    type: Number,
-    required: true,
-  },
-  // Foreign key
-  location: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Destination",
-    required: [true, "A quest must belong to a specific location"],
-  },
-  questType: {
-    type: String,
-    required: true,
-  },
-  difficulty: {
-    type: String,
-    enum: ["Easy", "Medium", "Hard"],
-    message: "{VALUE} is not a valid difficulty level",
-    default: "Easy",
-  },
-  achievements: {
-    type: String,
-    required: [true, "A quest must provide achievements or xp"],
-  },
-});
+  { timestamps: true },
+);
 
+questSchema.index({ mapPosition: "2dsphere" });
 const Quest = mongoose.model("Quest", questSchema);
-
 module.exports = Quest;
