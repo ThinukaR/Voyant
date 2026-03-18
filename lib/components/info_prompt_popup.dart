@@ -350,3 +350,93 @@ class _InfoPromptPopupState extends State<InfoPromptPopup>
       ),
     );
   }
+
+//selects icon type to show as visual indication for prompts 
+  IconData _getMessageTypeIcon() {
+    switch (widget.message.messageType) {
+      case 'hint':
+        return Icons.lightbulb;
+      case 'warning':
+        return Icons.warning;
+      case 'quest_update':
+        return Icons.assignment;
+      case 'reward':
+        return Icons.emoji_events;
+      default:
+        return Icons.info;
+    }
+  }
+
+  String _formatTimestamp(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+
+    if (difference.inMinutes < 1) {
+      return "Just now";
+    } else if (difference.inHours < 1) {
+      return "${difference.inMinutes}m ago";
+    } else if (difference.inDays < 1) {
+      return "${difference.inHours}h ago";
+    } else {
+      return "${difference.inDays}d ago";
+    }
+  }
+}
+
+// overlaying (in case of multiple popups )
+class InfoPromptOverlay extends StatefulWidget {
+  final Widget child;
+  final String userId;
+
+  const InfoPromptOverlay({
+    super.key,
+    required this.child,
+    required this.userId,
+  });
+
+  @override
+  State<InfoPromptOverlay> createState() => _InfoPromptOverlayState();
+}
+
+class _InfoPromptOverlayState extends State<InfoPromptOverlay> {
+  final List<Message> _activeMessages = [];
+  final List<GlobalKey> _popupKeys = [];
+
+  void showMessage(Message message) {
+    setState(() {
+      _activeMessages.add(message);
+      _popupKeys.add(GlobalKey());
+    });
+  }
+
+  void _removeMessage(String messageId) { 
+    final index = _activeMessages.indexWhere((msg) => msg.id == messageId);
+    if (index != -1) {
+      setState(() {
+        _activeMessages.removeAt(index);
+        _popupKeys.removeAt(index);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        widget.child,
+        ..._activeMessages.asMap().entries.map((entry) {
+          final index = entry.key;
+          final message = entry.value;
+          
+          return InfoPromptPopup(
+            key: _popupKeys[index],
+            message: message,
+            userId: widget.userId,
+            onDismiss: (messageId) => _removeMessage(messageId), 
+          );
+        }),
+      ],
+    );
+  }
+}
+
