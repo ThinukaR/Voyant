@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:voyant/widgets/animated_gradient_background.dart';
+import 'package:voyant/screens/settings_screen.dart';
+import 'package:voyant/screens/referral_system/refer_screen.dart';
 
 class HomeTab extends StatefulWidget {
   final VoidCallback onTripsTap;
@@ -105,19 +107,45 @@ class _HomeTabState extends State<HomeTab> {
                             ),
                           ],
                         ),
-                        Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFB020DD), Color(0xFF551161)],
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.card_giftcard, color: Color(0xFFB020DD)),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const ReferScreenView(),
+                                  ),
+                                );
+                              },
                             ),
-                            border: Border.all(
-                                color: const Color(0xFFB020DD), width: 2),
-                          ),
-                          child: const Icon(Icons.person,
-                              color: Colors.white, size: 30),
+                            IconButton(
+                              icon: const Icon(Icons.settings, color: Color(0xFFB020DD)),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const SettingsScreen(),
+                                  ),
+                                );
+                              },
+                            ),
+                            Container(
+                              width: 50,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFFB020DD), Color(0xFF551161)],
+                                ),
+                                border: Border.all(
+                                    color: const Color(0xFFB020DD), width: 2),
+                              ),
+                              child: const Icon(Icons.person,
+                                  color: Colors.white, size: 30),
+                            ),
+                          ],
                         ),
                       ],
                     ),

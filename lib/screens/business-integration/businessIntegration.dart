@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_functions/cloud_functions.dart';
+// import 'package:cloud_functions/cloud_functions.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -14,7 +14,7 @@ class _BusinessScreenState extends State<BusinessScreen> {
   //underscore to make them all private variables 
   //variables set to private here mostly for security reasons 
   final TextEditingController _codeController = TextEditingController();
-  final FirebaseFunctions _functions = FirebaseFunctions.instance;
+  // final FirebaseFunctions _functions = FirebaseFunctions.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
