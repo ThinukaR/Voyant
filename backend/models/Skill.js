@@ -2,30 +2,48 @@ const mongoose = require("mongoose");
 
 const skillSchema = new mongoose.Schema({
   skillId: {
-    type: Number,
+    type: String,
     required: true,
     unique: true,
+    trim: true,
+    // e.g. "e1a", "w2b", "m3a" — matches Flutter node IDs
   },
-  classId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "SkillClass",
-    required: [true, "Every skill must belong to a class"],
-  },
-  name: {
+  branch: {
     type: String,
+    required: true,
+    enum: ["trailblazer", "wanderer", "prime", "seeker"],
+  },
+  tier: {
+    type: Number,
+    required: true,
+    enum: [1, 2, 3],
+  },
+  label: {
+    type: String,
+    required: true,
     trim: true,
   },
-  status: {
+  description: {
     type: String,
-    enum: ["Locked", "Unlocked"],
-    default: "Locked",
+    required: true,
+    trim: true,
+  },
+  icon: {
+    type: String,
+    required: true,
+    trim: true,
+    // Store the icon name as a string e.g. "visibility_rounded"
+  },
+  state: {
+    type: String,
+    enum: ["available", "locked", "unlocked"],
+    default: "locked",
   },
   skillPoint: {
     type: Number,
-    required: [
-      true,
-      "Each skill need to have his its own number of skill points to unlock",
-    ],
+    required: true,
+    default: 0,
+    // Cost in skill points to unlock this skill
   },
 });
 

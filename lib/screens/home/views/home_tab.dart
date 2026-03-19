@@ -374,18 +374,14 @@ class _HomeTabState extends State<HomeTab> {
         children: [
           Icon(icon, color: color, size: 24),
           const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Text(
-            label,
-            style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
-          ),
+          Text(value,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold)),
+          Text(label,
+              style:
+                  TextStyle(color: Colors.grey.shade500, fontSize: 12)),
         ],
       ),
     );

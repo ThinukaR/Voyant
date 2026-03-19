@@ -3,7 +3,7 @@ const router = express.Router();
 const userTripController = require("../controllers/userTripsController");
 const protect = require("../middleware/auth");
 
-// router.use(protect);
+router.use(protect);
 
 router
   .route("/")

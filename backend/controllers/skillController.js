@@ -3,45 +3,27 @@ const SkillClass = require("../models/SkillClass.js");
 
 exports.getAllSkills = async (req, res) => {
   try {
-    const skillData = await Skill.find().populate("classId", "name");
-    res.status(200).json({
-      status: "success",
-      results: skillData.length,
-      data: skillData,
-    });
+    const skillData = await Skill.find();
+    res.status(200).json(skillData); // plain array for Flutter
   } catch (err) {
-    res.status(500).json({
-      status: "fail",
-      message: err.message,
-    });
+    res.status(500).json({ status: "fail", message: err.message });
   }
 };
 
 exports.getSkill = async (req, res) => {
   try {
-    const skill = await Skill.findById(req.params.id).populate(
-      "classId",
-      "name",
-    );
+    const skill = await Skill.findById(req.params.id);
     if (!skill) {
-      return res.status(404).json({
-        status: "fail",
-        message: "Skill not found",
-      });
+      return res
+        .status(404)
+        .json({ status: "fail", message: "Skill not found" });
     }
-    res.status(200).json({
-      status: "success",
-      data: skill,
-    });
+    res.status(200).json({ status: "success", data: skill });
   } catch (err) {
-    res.status(500).json({
-      status: "fail",
-      message: err.message,
-    });
+    res.status(500).json({ status: "fail", message: err.message });
   }
 };
 
-// Need to restrict access only to admins here -❗❗❗
 exports.createSkill = async (req, res) => {
   try {
     const skill = await Skill.create(req.body);
@@ -58,21 +40,13 @@ exports.updateSkill = async (req, res) => {
       runValidators: true,
     });
     if (!skill) {
-      return res.status(404).json({
-        status: "fail",
-        message: "Skill not found",
-      });
+      return res
+        .status(404)
+        .json({ status: "fail", message: "Skill not found" });
     }
-
-    res.status(200).json({
-      status: "success",
-      data: skill,
-    });
+    res.status(200).json({ status: "success", data: skill });
   } catch (err) {
-    res.status(400).json({
-      status: "fail",
-      message: err.message,
-    });
+    res.status(400).json({ status: "fail", message: err.message });
   }
 };
 
@@ -83,5 +57,23 @@ exports.deleteSkill = async (req, res) => {
     return res.status(204).send();
   } catch (err) {
     return res.status(400).json({ message: err.message });
+  }
+};
+
+exports.getAllClasses = async (req, res) => {
+  try {
+    const classes = await SkillClass.find();
+    return res.json(classes);
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getSkillsForClass = async (req, res) => {
+  try {
+    const skills = await Skill.find({ branch: req.params.branch }); // use branch not classId
+    return res.json(skills);
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
   }
 };

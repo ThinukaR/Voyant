@@ -1,5 +1,7 @@
 // Imports
 require("dotenv").config();
+require("./firebase/firebaseAdmin");
+
 const express = require("express");
 const connectToDatabase = require("./db");
 const avatarRoutes = require("./routes/avatarRoutes");

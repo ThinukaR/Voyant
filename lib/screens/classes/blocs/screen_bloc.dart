@@ -36,7 +36,8 @@ class ScreenBloc extends Bloc<ScreenEvent, ScreenState> {
           ],
         )) {
     on<ScreenPageChanged>(
-      (event, emit) => emit(state.copyWith(currentPageIndex: event.pageIndex)),
+      (event, emit) =>
+          emit(state.copyWith(currentPageIndex: event.pageIndex)),
     );
 
     on<ScreenClassSelected>(
@@ -49,7 +50,13 @@ class ScreenBloc extends Bloc<ScreenEvent, ScreenState> {
     on<ScreenSelectionConfirmed>(
       (event, emit) {
         if (state.selectedClassName != null) {
+          // Emit confirmed so the listener fires exactly once
           emit(state.copyWith(status: ScreenStatus.confirmed));
+          // Immediately reset so the listener never re-fires on rebuild
+          emit(state.copyWith(
+            status: ScreenStatus.initial,
+            selectedClassName: state.selectedClassName,
+          ));
         }
       },
     );

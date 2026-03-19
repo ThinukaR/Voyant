@@ -1,16 +1,4 @@
-# voyant
+# Voyant
+## game. travel. explore. 
 
-A gamified travel application which is made to engage users into exploration
-
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+A gamified traveling platform that provides users with quests that they can embark on. This quest based approach will allow the user to explore tourist spots and discover certain places that are less visited. Following a core story-line the user will be guided to primary landmarks along with side missions as supplementary tasks. This will be displayed all in a map view with the users avatar representing their location. This will also in cooperate some AR elements providing a more engaging experience to the user. 
