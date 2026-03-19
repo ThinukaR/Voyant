@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:voyant/widgets/animated_gradient_background.dart';
+import 'package:geolocator/geolocator.dart';
 
 class QuestScreen extends StatefulWidget {
   final String questId;
@@ -93,9 +94,15 @@ class _QuestScreenState extends State<QuestScreen> {
     Map<String, dynamic> body = {};
 
     if (task['type'] == 'geofence') {
-      // TODO: get real GPS from device later
-      // for now using hardcoded coordinates for testing
-      body = {'userLat': 6.02604, 'userLng': 80.21531};
+      // get real GPS from device
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      body = {'userLat': position.latitude, 'userLng': position.longitude};
     } else if (task['type'] == 'number_input' ||
         task['type'] == 'string_input') {
       // show input dialog

@@ -72,3 +72,13 @@ exports.getAllUserTrips = async (req, res) => {
     });
   }
 };
+
+exports.startTrip = async (req, res) => {
+  try {
+    const trip = await UserTripData.findById(req.params.tripId);
+    if (!trip) return res.status(404).json({ message: "Trip not found" });
+    return res.json({ message: "Trip started", trip });
+  } catch (err) {
+    return res.status(400).json({ message: err.message });
+  }
+};

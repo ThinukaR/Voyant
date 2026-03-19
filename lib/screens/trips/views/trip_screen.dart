@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:voyant/screens/quest/views/quests_list_screen.dart';
 import 'package:voyant/widgets/animated_gradient_background.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class TripDetailScreen extends StatefulWidget {
   final String tripId;
@@ -19,6 +21,9 @@ class TripDetailScreen extends StatefulWidget {
 }
 
 class _TripDetailScreenState extends State<TripDetailScreen> {
+  static const LatLng galleCenter = LatLng(6.0269, 80.2168);
+  static const double galleRadius = 500;
+  bool _tripStarted = false;
   static const String baseUrl = 'http://10.0.2.2:3000/api';
 
   List<dynamic> quests = [];
@@ -55,9 +60,63 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     }
   }
 
+  Future<void> _startTrip() async {
+    try {
+      // check if GPS is enabled on the device
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        _showMessage('Please enable GPS', Colors.red);
+        return;
+      }
+
+      // check location permission
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          _showMessage('Location permission denied', Colors.red);
+          return;
+        }
+      }
+
+      // get current GPS coordinates from device
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      // calculate distance between user and Galle Fort center
+      final distance = Geolocator.distanceBetween(
+        position.latitude,
+        position.longitude,
+        galleCenter.latitude,
+        galleCenter.longitude,
+      );
+
+      // if user is outside the allowed radius, block the start
+      if (distance > galleRadius) {
+        _showMessage(
+          'You are ${distance.toInt()}m away. Go to Galle Fort to start.',
+          Colors.red,
+        );
+        return;
+      }
+
+      // user is within the geofence — mark trip as started
+      setState(() => _tripStarted = true);
+      _showMessage('Trip started! Good luck!', Colors.green);
+    } catch (e) {
+      _showMessage('Error: $e', Colors.red);
+    }
+  }
+
+  void _showMessage(String message, Color color) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message), backgroundColor: color));
+  }
+
   @override
   Widget build(BuildContext context) {
-    // calculate stats from real quest data
     final totalQuests = quests.length;
     final completedQuests = quests
         .where((q) => q['userStatus'] == 'completed')
@@ -77,27 +136,7 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
     final progress = totalQuests == 0 ? 0.0 : completedQuests / totalQuests;
 
     return Scaffold(
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 1,
-        onTap: (index) => Navigator.pop(context),
-        backgroundColor: const Color(0xFF12121A),
-        selectedItemColor: const Color(0xFFB020DD),
-        unselectedItemColor: Colors.grey.shade600,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: "Home"),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.map_outlined),
-            label: "Trips",
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.explore), label: "Map"),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.backpack),
-            label: "Inventory",
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: "Avatar"),
-        ],
-      ),
+      // bottomNavigationBar removed — handled by RootScreen
       body: AnimatedGradientBackground(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -275,7 +314,63 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
                         ),
                       ),
 
-                      const SizedBox(height: 50),
+                      const SizedBox(height: 20),
+
+                      // START TRIP BUTTON
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
+                        ),
+                        child: _tripStarted
+                            ? Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: Colors.green.withOpacity(0.4),
+                                  ),
+                                ),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.check_circle,
+                                      color: Colors.green,
+                                      size: 20,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Trip Active',
+                                      style: TextStyle(
+                                        color: Colors.green,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : ElevatedButton(
+                                onPressed: _startTrip,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFB020DD),
+                                  minimumSize: const Size(double.infinity, 50),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Start Trip',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                      ),
 
                       // NAVIGATION
                       GestureDetector(

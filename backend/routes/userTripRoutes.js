@@ -11,5 +11,5 @@ router
   .get(userTripController.getAllTrips);
 
 router.get("/:id", userTripController.getTripById);
-
+router.post("/start/:tripId", userTripController.startTrip);
 module.exports = router;
