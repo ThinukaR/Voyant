@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 // ============================================================
 // DATA MODEL
@@ -15,6 +17,7 @@ class SkillNode {
   final IconData icon;
   final int tier;
   final String branch;
+  final int skillPoint;
   NodeState state;
 
   SkillNode({
@@ -25,6 +28,7 @@ class SkillNode {
     required this.tier,
     required this.branch,
     required this.state,
+    required this.skillPoint,
   });
 }
 
@@ -45,10 +49,11 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
   static const String baseUrl = 'http://10.0.2.2:3000/api';
 
   // ── State ──────────────────────────────────────────────────
-  int _skillPoints = 10;
+  int _skillPoints = 0;
   int _branchIndex = 0;
   bool isLoading = true;
   String? error;
+  // add to state variables
 
   // Unlock thresholds
   static const int _t2need = 2;
@@ -133,39 +138,68 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
   @override
   void initState() {
     super.initState();
-
     _slideCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    _slideAnim = Tween<Offset>(begin: Offset.zero, end: Offset.zero)
-        .animate(_slideCtrl);
-
+    _slideAnim = Tween<Offset>(
+      begin: Offset.zero,
+      end: Offset.zero,
+    ).animate(_slideCtrl);
     _nodes = [];
+    _loadSkillPoints();
     _loadSkills();
+  }
+
+  // load SP from Firestore
+  Future<void> _loadSkillPoints() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+    setState(() {
+      _skillPoints = (doc.data()?['skillPoints'] ?? 0) as int;
+    });
   }
 
   Future<void> _loadSkills() async {
     try {
+      // get Firebase token for auth
+      final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+
       final response = await http.get(
         Uri.parse('$baseUrl/skills'),
+        headers: {'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
+
+        // get user's unlocked skills from backend
+        final unlockedResponse = await http.get(
+          Uri.parse('$baseUrl/user-skills/my-skills'),
+          headers: {'Authorization': 'Bearer $token'},
+        );
+        final List<dynamic> unlockedData = unlockedResponse.statusCode == 200
+            ? jsonDecode(unlockedResponse.body)
+            : [];
+        final unlockedIds = unlockedData
+            .map((us) => us['skillId']?['_id']?.toString() ?? '')
+            .toSet();
+
         final loadedNodes = data.map((skill) {
+          final isUnlocked = unlockedIds.contains(skill['_id'].toString());
           return SkillNode(
-            id: skill['skillId'],
-            label: skill['label'],
-            description: skill['description'],
-            icon: _stringToIcon(skill['icon']),
-            tier: skill['tier'],
-            branch: skill['branch'],
-            state: skill['state'] == 'unlocked'
-                ? NodeState.unlocked
-                : skill['state'] == 'available'
-                    ? NodeState.available
-                    : NodeState.locked,
+            id: skill['_id'].toString(),
+            label: skill['label'] ?? skill['name'] ?? '',
+            description: skill['description'] ?? '',
+            icon: _stringToIcon(skill['icon'] ?? 'stars_rounded'),
+            tier: skill['tier'] ?? 1,
+            branch: skill['branch'] ?? 'seeker',
+            skillPoint: skill['skillPoint'] ?? 2,
+            state: isUnlocked ? NodeState.unlocked : NodeState.locked,
           );
         }).toList();
 
@@ -198,8 +232,12 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
   // ── Logic ──────────────────────────────────────────────────
 
   int _countUnlocked(String branch, int tier) => _nodes
-      .where((n) =>
-          n.branch == branch && n.tier == tier && n.state == NodeState.unlocked)
+      .where(
+        (n) =>
+            n.branch == branch &&
+            n.tier == tier &&
+            n.state == NodeState.unlocked,
+      )
       .length;
 
   void _recalc() {
@@ -230,7 +268,7 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
     _slideCtrl.forward();
   }
 
-  void _onNodeTap(SkillNode node) {
+  void _onNodeTap(SkillNode node) async {
     if (node.state == NodeState.unlocked) {
       _showInfo(node);
       return;
@@ -242,28 +280,65 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
       _snack(req, const Color(0xFF160D2E));
       return;
     }
-    if (_skillPoints <= 0) {
-      _snack('No skill points remaining!', const Color(0xFF2D2550));
+    if (_skillPoints < node.skillPoint) {
+      _snack(
+        'Need ${node.skillPoint} SP. You have $_skillPoints SP.',
+        const Color(0xFF2D2550),
+      );
       return;
     }
-    setState(() {
-      node.state = NodeState.unlocked;
-      _skillPoints--;
-      _recalc();
-    });
-    _snack('${node.label} unlocked!', _color[node.branch]!,
-        duration: const Duration(seconds: 1));
+
+    // call backend to unlock
+    try {
+      final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+      final response = await http.post(
+        Uri.parse('$baseUrl/user-skills/${node.id}'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'skillId': node.id}),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final result = jsonDecode(response.body);
+        setState(() {
+          node.state = NodeState.unlocked;
+          _skillPoints =
+              result['remainingSP'] ?? _skillPoints - node.skillPoint;
+          _recalc();
+        });
+        _snack(
+          '${node.label} unlocked!',
+          _color[node.branch]!,
+          duration: const Duration(seconds: 1),
+        );
+      } else {
+        final result = jsonDecode(response.body);
+        _snack(
+          result['message'] ?? 'Failed to unlock',
+          const Color(0xFF2D2550),
+        );
+      }
+    } catch (e) {
+      _snack('Connection error', const Color(0xFF2D2550));
+    }
   }
 
-  void _snack(String msg, Color bg,
-      {Duration duration = const Duration(seconds: 2)}) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg, style: const TextStyle(color: Colors.white)),
-      backgroundColor: bg,
-      behavior: SnackBarBehavior.floating,
-      duration: duration,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    ));
+  void _snack(
+    String msg,
+    Color bg, {
+    Duration duration = const Duration(seconds: 2),
+  }) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg, style: const TextStyle(color: Colors.white)),
+        backgroundColor: bg,
+        behavior: SnackBarBehavior.floating,
+        duration: duration,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
   }
 
   void _showInfo(SkillNode node) {
@@ -290,28 +365,42 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(14),
                   color: c.withValues(alpha: 0.15),
-                  border: Border.all(color: c.withValues(alpha: 0.4), width: 1.5),
+                  border: Border.all(
+                    color: c.withValues(alpha: 0.4),
+                    width: 1.5,
+                  ),
                 ),
                 child: Icon(node.icon, color: c, size: 24),
               ),
               const SizedBox(height: 12),
-              Text(node.label,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800)),
+              Text(
+                node.label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
               const SizedBox(height: 4),
-              Text('Tier ${node.tier}',
-                  style: TextStyle(
-                      color: c,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5)),
+              Text(
+                'Tier ${node.tier}',
+                style: TextStyle(
+                  color: c,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                ),
+              ),
               const SizedBox(height: 8),
-              Text(node.description,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      color: Color(0xFFB0A8D8), fontSize: 13, height: 1.5)),
+              Text(
+                node.description,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Color(0xFFB0A8D8),
+                  fontSize: 13,
+                  height: 1.5,
+                ),
+              ),
               const SizedBox(height: 16),
               GestureDetector(
                 onTap: () => Navigator.of(context).pop(),
@@ -323,10 +412,13 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
                     borderRadius: BorderRadius.circular(12),
                   ),
                   alignment: Alignment.center,
-                  child: const Text('Close',
-                      style: TextStyle(
-                          color: Color(0xFFB0A8D8),
-                          fontWeight: FontWeight.w600)),
+                  child: const Text(
+                    'Close',
+                    style: TextStyle(
+                      color: Color(0xFFB0A8D8),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -359,16 +451,16 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
     }
 
     final branch = _branches[_branchIndex];
-    final c      = _color[branch]!;
-    final bName  = _branchName[branch]!;
-    final bIcon  = _branchIcon[branch]!;
+    final c = _color[branch]!;
+    final bName = _branchName[branch]!;
+    final bIcon = _branchIcon[branch]!;
 
     final t1 = _nodes.where((n) => n.branch == branch && n.tier == 1).toList();
     final t2 = _nodes.where((n) => n.branch == branch && n.tier == 2).toList();
     final t3 = _nodes.where((n) => n.branch == branch && n.tier == 3).toList();
 
-    final t1u       = _countUnlocked(branch, 1);
-    final t2u       = _countUnlocked(branch, 2);
+    final t1u = _countUnlocked(branch, 1);
+    final t2u = _countUnlocked(branch, 2);
     final tier2Open = t1u >= _t2need;
     final tier3Open = t2u >= _t3need;
 
@@ -387,41 +479,55 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
-                      Text('Skill Tree',
-                          style: TextStyle(
-                              color: Color(0xFFB0A8D8),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400)),
+                      Text(
+                        'Skill Tree',
+                        style: TextStyle(
+                          color: Color(0xFFB0A8D8),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
                       SizedBox(height: 2),
-                      Text('Your Skills',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 28,
-                              fontWeight: FontWeight.w800)),
+                      Text(
+                        'Your Skills',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ],
                   ),
                   // SP badge
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8),
+                      horizontal: 14,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: const Color(0xFF160D2E),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                          color: const Color(0xFF7C3AED)
-                              .withValues(alpha: 0.4),
-                          width: 1),
+                        color: const Color(0xFF7C3AED).withValues(alpha: 0.4),
+                        width: 1,
+                      ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.stars_rounded,
-                            color: Color(0xFF7C3AED), size: 15),
+                        const Icon(
+                          Icons.stars_rounded,
+                          color: Color(0xFF7C3AED),
+                          size: 15,
+                        ),
                         const SizedBox(width: 5),
-                        Text('$_skillPoints SP',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700)),
+                        Text(
+                          '$_skillPoints SP',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -449,18 +555,23 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
                         color: c.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                            color: c.withValues(alpha: 0.35), width: 1.5),
+                          color: c.withValues(alpha: 0.35),
+                          width: 1.5,
+                        ),
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(bIcon, color: c, size: 20),
                           const SizedBox(width: 8),
-                          Text(bName,
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 17,
-                                  fontWeight: FontWeight.w800)),
+                          Text(
+                            bName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -488,9 +599,7 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
                   height: 6,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(3),
-                    color: i == _branchIndex
-                        ? dc
-                        : const Color(0xFF2D2550),
+                    color: i == _branchIndex ? dc : const Color(0xFF2D2550),
                   ),
                 );
               }),
@@ -598,19 +707,20 @@ class _TreeConnector extends StatelessWidget {
           if (label != null) ...[
             const SizedBox(height: 4),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
                 color: const Color(0xFF160D2E),
                 borderRadius: BorderRadius.circular(20),
-                border:
-                    Border.all(color: const Color(0xFF2D2550), width: 1),
+                border: Border.all(color: const Color(0xFF2D2550), width: 1),
               ),
-              child: Text(label!,
-                  style: const TextStyle(
-                      color: Color(0xFFB0A8D8),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500)),
+              child: Text(
+                label!,
+                style: const TextStyle(
+                  color: Color(0xFFB0A8D8),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
             const SizedBox(height: 4),
           ],
@@ -650,8 +760,8 @@ class _TierHeader extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-            child: Container(
-                height: 1, color: color.withValues(alpha: 0.2))),
+          child: Container(height: 1, color: color.withValues(alpha: 0.2)),
+        ),
         const SizedBox(width: 12),
         Column(
           children: [
@@ -663,25 +773,31 @@ class _TierHeader extends StatelessWidget {
                     padding: const EdgeInsets.only(right: 5),
                     child: Icon(Icons.lock_rounded, color: color, size: 12),
                   ),
-                Text(label,
-                    style: TextStyle(
-                        color: color,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.5)),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                  ),
+                ),
               ],
             ),
-            Text(subtitle,
-                style: TextStyle(
-                    color: color.withValues(alpha: 0.6),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w500)),
+            Text(
+              subtitle,
+              style: TextStyle(
+                color: color.withValues(alpha: 0.6),
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
         const SizedBox(width: 12),
         Expanded(
-            child: Container(
-                height: 1, color: color.withValues(alpha: 0.2))),
+          child: Container(height: 1, color: color.withValues(alpha: 0.2)),
+        ),
       ],
     );
   }
@@ -714,11 +830,10 @@ class _NodeRow extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: nodes
-              .map((n) => _NodeBubble(
-                    node: n,
-                    color: color,
-                    onTap: () => onTap(n),
-                  ))
+              .map(
+                (n) =>
+                    _NodeBubble(node: n, color: color, onTap: () => onTap(n)),
+              )
               .toList(),
         ),
       ],
@@ -743,10 +858,10 @@ class _NodeBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final unlocked  = node.state == NodeState.unlocked;
+    final unlocked = node.state == NodeState.unlocked;
     final available = node.state == NodeState.available;
-    final locked    = node.state == NodeState.locked;
-    final nc        = locked ? const Color(0xFF2D2550) : color;
+    final locked = node.state == NodeState.locked;
+    final nc = locked ? const Color(0xFF2D2550) : color;
 
     return GestureDetector(
       onTap: onTap,
@@ -761,22 +876,23 @@ class _NodeBubble extends StatelessWidget {
               color: unlocked
                   ? nc.withValues(alpha: 0.18)
                   : available
-                      ? const Color(0xFF160D2E)
-                      : const Color(0xFF0F0920),
+                  ? const Color(0xFF160D2E)
+                  : const Color(0xFF0F0920),
               border: Border.all(
                 color: unlocked
                     ? nc
                     : available
-                        ? nc.withValues(alpha: 0.35)
-                        : const Color(0xFF1A1230),
+                    ? nc.withValues(alpha: 0.35)
+                    : const Color(0xFF1A1230),
                 width: unlocked ? 2.5 : 1.5,
               ),
               boxShadow: unlocked
                   ? [
                       BoxShadow(
-                          color: nc.withValues(alpha: 0.3),
-                          blurRadius: 16,
-                          spreadRadius: 1)
+                        color: nc.withValues(alpha: 0.3),
+                        blurRadius: 16,
+                        spreadRadius: 1,
+                      ),
                     ]
                   : [],
             ),
@@ -788,8 +904,8 @@ class _NodeBubble extends StatelessWidget {
                   color: unlocked
                       ? nc
                       : available
-                          ? nc.withValues(alpha: 0.5)
-                          : const Color(0xFF2D2550),
+                      ? nc.withValues(alpha: 0.5)
+                      : const Color(0xFF2D2550),
                   size: unlocked ? 22 : 20,
                 ),
                 if (unlocked) ...[
@@ -810,11 +926,10 @@ class _NodeBubble extends StatelessWidget {
                 color: unlocked
                     ? Colors.white
                     : available
-                        ? const Color(0xFFB0A8D8)
-                        : const Color(0xFF2D2550),
+                    ? const Color(0xFFB0A8D8)
+                    : const Color(0xFF2D2550),
                 fontSize: 10,
-                fontWeight:
-                    unlocked ? FontWeight.w700 : FontWeight.w500,
+                fontWeight: unlocked ? FontWeight.w700 : FontWeight.w500,
                 height: 1.3,
               ),
             ),
@@ -844,9 +959,9 @@ class _HLinePainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     final spacing = size.width / count;
-    final y       = size.height / 2;
-    final firstX  = spacing / 2;
-    final lastX   = spacing * (count - 0.5);
+    final y = size.height / 2;
+    final firstX = spacing / 2;
+    final lastX = spacing * (count - 0.5);
 
     canvas.drawLine(Offset(firstX, y), Offset(lastX, y), paint);
 
