@@ -93,3 +93,103 @@ void _handleChoice(DialogueOption option) {
       _showReferenceInput = false;
     });
   }
+
+  
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+        //build for animation 
+      child: AnimatedBuilder(
+        animation: _animationController,
+        builder: (context, child) {
+          return SlideTransition(
+            position: _slideAnimation,
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.95),
+                      Colors.black.withOpacity(0.85),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+                child: SafeArea(
+                  child: Column(
+                    children: [
+                      //npc potrait and name 
+                      _buildNPCPortrait(), 
+                      //fix: could require spacer later 
+                      
+                      //the dialogue box build 
+                      _buildDialogueBox(),
+                      
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+//building npc potrait
+  Widget _buildNPCPortrait() {
+    return Padding(
+      padding: const EdgeInsets.all(20.0),
+      child: Row(
+        children: [
+          Container(
+            width: 120,
+            height: 120,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.purple.withOpacity(0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: widget.dialogueNode.npcAvatar.isNotEmpty
+                  ? Image.network(
+                      widget.dialogueNode.npcAvatar, //gets npc's image 
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: const Color(0xFF4A148C),
+                          child: const Icon(
+                            Icons.person,
+                            color: Colors.white,
+                            size: 60,
+                          ),
+                        );
+                      },
+                    )
+
+                  : Container(
+                      color: const Color(0xFF4A148C),
+                      child: const Icon(
+                        Icons.person,
+                        color: Colors.white,
+                        size: 60,
+                      ),
+                    ),
+            ),
+          ),
+        
+        ],
+      ),
+    );
+  }
