@@ -109,3 +109,11 @@ const questTriggerSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+//indexing 
+questTriggerSchema.index({ 'location.coordinates': '2dsphere' });
+questTriggerSchema.index({ subQuestId: 1 });
+questTriggerSchema.index({ triggerType: 1, isActive: 1 });
+
+const QuestTrigger = mongoose.model("QuestTrigger", questTriggerSchema);
+module.exports = QuestTrigger;
