@@ -23,8 +23,18 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      # Extract version from pubspec.yaml (e.g., 1.0.0)
+      - name: Get version from pubspec
+        id: pubspec_version
+        run: |
+          VERSION=$(grep 'version: ' pubspec.yaml | sed 's/version: //;s/+.*//')
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Build release APK
-        run: flutter build apk --release
+        run: |
+          flutter build apk --release \
+          --build-name=${{ steps.pubspec_version.outputs.VERSION }}.${{ github.run_number }} \
+          --build-number=${{ github.run_number }}
 
       # Save the APK as a downloadable artifact in GitHub
       - name: Upload APK artifact
@@ -41,4 +51,4 @@ jobs:
           token: ${{ secrets.FIREBASE_TOKEN }}
           groups: testers                 # Tester group name from Firebase console
           file: build/app/outputs/flutter-apk/app-release.apk
-          releaseNotes: "Build from commit: ${{ github.sha }}"
+          releaseNotes: "Build v${{ steps.pubspec_version.outputs.VERSION }}.${{ github.run_number }} from commit: ${{ github.sha }}"
