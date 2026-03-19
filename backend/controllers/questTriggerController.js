@@ -170,3 +170,76 @@ function calculateDistance(lat1, lon1, lat2, lon2) { //;at1 and lon1 - first coo
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 
   return R * c; //the distance in meters
+}
+
+//executing trigger actions to get events 
+async function executeTriggerActions(trigger, userId, userLocation) {
+  const results = [];
+  
+  try {
+    if (trigger.actions.startQuest && trigger.subQuestId) {
+      //check - seeing if quest progress exists 
+      let userProgress = await UserMainQuestProgress.findOne({
+        userId,
+        mainQuestId: trigger.subQuestId.mainQuestId
+      });
+      
+      if (!userProgress) {
+        //if quest progress does not exist - create new quest
+        userProgress = new UserMainQuestProgress({
+          userId,
+          mainQuestId: trigger.subQuestId.mainQuestId,
+          status: 'in_progress',
+          startedAt: new Date()
+        });
+        
+        const allSubQuests = await SubQuest.find({
+          mainQuestId: trigger.subQuestId.mainQuestId
+        }).sort({ questOrder: 1 });
+        
+        userProgress.subQuestProgress = allSubQuests.map((subQuest, index) => ({
+          subQuestId: subQuest._id,
+          status: index === 0 ? 'in_progress' : 'locked',
+          currentDialogueNodeId: subQuest.startDialogueId,
+          completedDialogueNodes: [],
+          userChoices: [],
+          flags: [],
+          xpEarned: 0
+        }));
+        
+        await userProgress.save();
+        results.push({ action: 'quest_started', questId: userProgress._id });
+      }
+    }
+    
+    //notification action 
+    if (trigger.actions.showNotification) {
+      results.push({ 
+        action: 'notification', 
+        notification: trigger.actions.showNotification 
+      });
+    }
+    
+    //NPC spawn action
+    if (trigger.actions.spawnNPC) {
+      results.push({ 
+        action: 'npc_spawned', 
+        npc: trigger.actions.spawnNPC 
+      });
+    }
+    
+    //dialogue action
+    if (trigger.actions.showDialogue) {
+      results.push({ 
+        action: 'dialogue_triggered', 
+        dialogue: trigger.actions.showDialogue 
+      });
+    }
+    
+    return results;
+    
+  } catch (error) {
+    console.error('Error executing trigger actions:', error);
+    throw error;
+  }
+}
