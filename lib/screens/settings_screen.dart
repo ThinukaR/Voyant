@@ -5,6 +5,7 @@ import 'notification_settings_screen.dart';
 import 'appearance_settings_screen.dart';
 import 'privacy_security_settings_screen.dart';
 import 'help_support_settings_screen.dart';
+import 'about_settings_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -108,6 +109,13 @@ class SettingsScreen extends StatelessWidget {
                               context,
                               MaterialPageRoute(
                                 builder: (context) => const HelpSupportSettingsScreen(),
+                              ),
+                            );
+                          } else if (title == "About") {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const AboutSettingsScreen(),
                               ),
                             );
                           }
