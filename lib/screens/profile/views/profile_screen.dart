@@ -118,7 +118,7 @@ class Stats extends StatelessWidget {
   }
 }
 
-// Referral Section with button to navigate to refer screen
+//referral button 
 class ReferralSection extends StatelessWidget {
   const ReferralSection({super.key});
 
@@ -139,13 +139,13 @@ class ReferralSection extends StatelessWidget {
           Row(
             children: [
               const Icon(
-                Icons.card_giftcard,
+                Icons.star,
                 color: Colors.cyanAccent,
                 size: 24,
               ),
               const SizedBox(width: 12),
               const Text(
-                'Refer & Earn',
+                'Refer & Earn Rewards',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 18,
@@ -156,7 +156,7 @@ class ReferralSection extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           const Text(
-            'Invite friends to Voyant and earn rewards together!',
+            'Invite your friends and earn rewards together!',
             style: TextStyle(
               color: Colors.white70,
               fontSize: 14,
