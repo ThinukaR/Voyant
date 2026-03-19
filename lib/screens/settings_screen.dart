@@ -3,6 +3,7 @@ import 'components/settings_tile.dart';
 import 'account_settings_screen.dart';
 import 'notification_settings_screen.dart';
 import 'appearance_settings_screen.dart';
+import 'privacy_security_settings_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -92,6 +93,13 @@ class SettingsScreen extends StatelessWidget {
                               context,
                               MaterialPageRoute(
                                 builder: (context) => const AppearanceSettingsScreen(),
+                              ),
+                            );
+                          } else if (title == "Privacy & Security") {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const PrivacySecuritySettingsScreen(),
                               ),
                             );
                           }

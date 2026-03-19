@@ -20,7 +20,6 @@ class _SignInScreenState extends State<SignInScreen> {
   bool signInRequired = false;
   bool obscurePassword = true;
   bool rememberMe = false;
-  String? _errorMsg;
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +32,6 @@ class _SignInScreenState extends State<SignInScreen> {
         } else if (state is SignInFailure) {
           setState(() {
             signInRequired = false;
-            _errorMsg = 'Invalid email or password';
           });
         }
       },
