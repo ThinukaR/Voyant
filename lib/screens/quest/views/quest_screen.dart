@@ -126,14 +126,18 @@ class _QuestScreenState extends State<QuestScreen> {
       final result = jsonDecode(response.body);
 
       if (response.statusCode == 200 && result['passed'] == true) {
-        // show XP earned
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('✅ +${result['xpAwarded']} XP earned!'),
-              backgroundColor: Colors.green,
-            ),
-          );
+        // check if user leveled up
+        if (result['leveledUp'] == true) {
+          _showLevelUpDialog(result['newLevel'], result['xpAwarded']);
+        } else {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('✅ +${result['xpAwarded']} XP earned!'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
         }
         // force full reload
         setState(() {
@@ -160,6 +164,80 @@ class _QuestScreenState extends State<QuestScreen> {
         ).showSnackBar(const SnackBar(content: Text('Connection error')));
       }
     }
+  }
+
+  // dialog box for when level uping
+  void _showLevelUpDialog(int newLevel, int xpAwarded) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A0A2E),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: const Color(0xFFB020DD).withOpacity(0.5)),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            // star icon
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFB020DD).withOpacity(0.2),
+                border: Border.all(color: const Color(0xFFB020DD), width: 2),
+              ),
+              child: const Icon(Icons.star, color: Colors.amber, size: 44),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'LEVEL UP!',
+              style: TextStyle(
+                color: Colors.amber,
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 2,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'You reached Level $newLevel',
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '+$xpAwarded XP earned',
+              style: const TextStyle(color: Colors.white54, fontSize: 13),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFB020DD),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'Awesome!',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // show dialog for number/string input tasks
