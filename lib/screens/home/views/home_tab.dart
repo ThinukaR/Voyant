@@ -107,7 +107,31 @@ class _HomeTabState extends State<HomeTab> {
                             ),
                           ],
                         ),
-                        // profile icon — tap to go to profile page
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.card_giftcard, color: Color(0xFFB020DD)),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const ReferScreenView(),
+                                  ),
+                                );
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.settings, color: Color(0xFFB020DD)),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const SettingsScreen(),
+                                  ),
+                                );
+                              },
+                            ),
+                            // profile icon — tap to go to profile page
                         GestureDetector(
                           onTap: () => Navigator.push(
                             context,
@@ -116,24 +140,26 @@ class _HomeTabState extends State<HomeTab> {
                             ),
                           ),
                           child: Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFFB020DD), Color(0xFF551161)],
-                              ),
-                              border: Border.all(
-                                color: const Color(0xFFB020DD),
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFFB020DD), Color(0xFF551161)],
+                                  ),
+                                  border: Border.all(
+                                    color: const Color(0xFFB020DD),
                                 width: 2,
                               ),
-                            ),
-                            child: const Icon(
+                                ),
+                                child: const Icon(
                               Icons.person,
-                              color: Colors.white,
+                                  color: Colors.white,
                               size: 30,
                             ),
                           ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
