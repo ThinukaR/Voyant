@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'components/settings_tile.dart';
+import 'account_settings_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -65,9 +66,20 @@ class SettingsScreen extends StatelessWidget {
                       endIndent: 20,
                     ),
                     itemBuilder: (context, index) {
+                      String title = settingsItems[index]["title"] as String;
                       return SettingsTile(
                         icon: settingsItems[index]["icon"] as IconData,
-                        title: settingsItems[index]["title"] as String,
+                        title: title,
+                        onTap: () {
+                          if (title == "Account") {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const AccountSettingsScreen(),
+                              ),
+                            );
+                          }
+                        },
                       );
                     },
                   ),

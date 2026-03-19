@@ -39,6 +39,7 @@ dependencies:
   bloc: ^9.2.0
   equatable: ^2.0.5
   google_maps_flutter: ^2.14.0
+  image_picker: ^1.0.0
 
   user_repository:
     path: packages/user_repository
