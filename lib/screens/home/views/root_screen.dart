@@ -4,6 +4,7 @@ import 'package:voyant/screens/home/views/home_tab.dart';
 import 'package:voyant/screens/trips/views/trips_list_screen.dart';
 import 'package:voyant/screens/avatar/views/cosmetic_screen.dart';
 import 'package:voyant/screens/avatar/views/avatar_screen.dart';
+import 'package:voyant/screens/skillTree/skillTree.dart';
 
 class RootScreen extends StatefulWidget {
   const RootScreen({super.key});
@@ -21,7 +22,7 @@ class _RootScreenState extends State<RootScreen> {
       HomeTab(onTripsTap: () => setState(() => _currentIndex = 1)),
       const TripsTab(),
       const Map(),
-      const CosmeticScreen(),
+      const SkillTreeScreen(),
       const AvatarScreen(),
     ];
 
@@ -42,10 +43,7 @@ class _RootScreenState extends State<RootScreen> {
             label: "Trips",
           ),
           BottomNavigationBarItem(icon: Icon(Icons.explore), label: "Map"),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.backpack),
-            label: "Cosmetic",
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.backpack), label: "Skills"),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: "Avatar"),
         ],
       ),
