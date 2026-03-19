@@ -129,6 +129,12 @@ exports.completeTask = async (req, res) => {
     const task = quest.tasks.id(req.params.taskId);
     if (!task) return res.status(404).json({ message: "Task not found" });
 
+    // award XP in Firestore
+    const { leveledUp, newLevel } = await awardXP(
+      req.userId,
+      taskProgress.xpAwarded,
+    );
+
     const progress = await UserQuestProgress.findOne({
       userId: req.userId,
       questId: new mongoose.Types.ObjectId(req.params.id),
@@ -178,6 +184,8 @@ exports.completeTask = async (req, res) => {
       xpAwarded: task.xpReward,
       questCompleted: allDone,
       totalXPEarned: progress.totalXPEarned,
+      leveledUp,
+      newLevel,
     });
   } catch (err) {
     return res.status(400).json({ message: err.message });
@@ -259,11 +267,38 @@ function getDistanceMeters(lat1, lng1, lat2, lng2) {
 async function awardXP(userId, xp) {
   const db = admin.firestore();
   const userRef = db.collection("users").doc(userId);
+
+  let leveledUp = false;
+  let newLevel = 0;
+
   await db.runTransaction(async (t) => {
     const doc = await t.get(userRef);
-    const current = doc.exists ? doc.data().totalXP || 0 : 0;
-    t.set(userRef, { totalXP: current + xp }, { merge: true });
+    const currentXP = doc.exists ? doc.data().totalXP || 0 : 0;
+    const currentLevel = doc.exists ? doc.data().level || 0 : 0;
+
+    const newTotalXP = currentXP + xp;
+    const newTotalSP = Math.floor(newTotalXP / 100);
+
+    // level = floor(totalXP / 1000), starts at 0
+    newLevel = Math.floor(newTotalXP / 1000);
+
+    // check if user crossed a level threshold
+    if (newLevel > currentLevel) {
+      leveledUp = true;
+    }
+
+    t.set(
+      userRef,
+      {
+        totalXP: newTotalXP,
+        skillPoints: newTotalSP,
+        level: newLevel,
+      },
+      { merge: true },
+    );
   });
+
+  return { leveledUp, newLevel };
 }
 
 exports.createQuest = async (req, res) => {
