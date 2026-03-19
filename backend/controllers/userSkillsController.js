@@ -1,6 +1,8 @@
 const UserSkill = require("../models/UserSkills.js");
 const Skill = require("../models/Skill.js");
 const User = require("../models/UserAccountDetails.js");
+const admin = require("../firebase/firebaseAdmin");
+const SkillClass = require("../models/SkillClass.js");
 
 exports.getAllUserSkills = async (req, res) => {
   try {
@@ -131,63 +133,71 @@ exports.updateUserSkillLevel = async (req, res) => {
 
 exports.unlockSkill = async (req, res) => {
   try {
-    const { userId, skillId } = req.body;
+    const { skillId } = req.body;
+    const userId = req.userId; // from auth middleware
 
-    // Finding skill and checking if it exists
     const skill = await Skill.findById(skillId);
-    if (!skill) {
-      return res.status(404).json({
-        status: "fail",
-        message: "Skill not found",
-      });
-    }
-    if (skill.status == "locked") {
-      return res.status(400).json({
-        status: "fail",
-        message: "This skill is not yet unlocked",
-      });
-    }
+    if (!skill) return res.status(404).json({ message: "Skill not found" });
 
-    // Checking if user has enough skill points
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({
-        status: "fail",
-        message: "User not found",
-      });
-    }
+    // check already unlocked
+    const existing = await UserSkill.findOne({ userId, skillId: skill._id });
+    if (existing) return res.status(400).json({ message: "Already unlocked" });
 
-    if (user.skillPoints < skill.skillPoints) {
-      return res.status(400).json({
-        status: "fail",
-        message: "Not enough skill points",
-      });
-    }
+    // check + deduct SP in Firestore
+    const db = admin.firestore();
+    const userRef = db.collection("users").doc(userId);
 
-    // Subtracting skills points from user if successful
-    user.skillPoints -= skill.skillPoint;
-    await user.save();
+    const result = await db.runTransaction(async (t) => {
+      const doc = await t.get(userRef);
+      const currentSP = doc.exists ? doc.data().skillPoints || 0 : 0;
+      if (currentSP < skill.skillPoint) {
+        return { success: false, message: `Not enough SP. Need ${skill.skillPoint}, have ${currentSP}` };
+      }
+      t.set(userRef, { skillPoints: currentSP - skill.skillPoint }, { merge: true });
+      return { success: true, remainingSP: currentSP - skill.skillPoint };
+    });
 
-    // Making the userSkill record
+    if (!result.success) return res.status(400).json({ message: result.message });
+
     const userSkill = await UserSkill.create({
       userId,
-      skillId,
+      skillId: skill._id,
       name: skill.name,
     });
-    res.status(201).json({
-      status: "success",
-      data: {
-        userSkill,
-        remainingSkillPoints: user.skillPoints,
-      },
+
+    return res.json({
+      message: "Skill unlocked",
+      skill: skill.name,
+      remainingSP: result.remainingSP,
     });
   } catch (err) {
-    if (err.code === 11000) {
-      return res.status(400).json({
-        status: "fail",
-        message: "Skill already unlocked",
-      });
-    }
-    res.status(400).json({ status: "fail", message: err.message });
+    if (err.code === 11000) return res.status(400).json({ message: "Already unlocked" });
+    return res.status(400).json({ message: err.message });
+  }
+};
+
+exports.selectClass = async (req, res) => {
+  try {
+    const skillClass = await SkillClass.findById(req.params.classId);
+    if (!skillClass) return res.status(404).json({ message: "Class not found" });
+
+    const db = admin.firestore();
+    await db.collection("users").doc(req.userId).set(
+      { selectedClass: skillClass.name },
+      { merge: true }
+    );
+
+    return res.json({ message: "Class selected", className: skillClass.name });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+};
+
+exports.getUserSkills = async (req, res) => {
+  try {
+    const userSkills = await UserSkill.find({ userId: req.userId }).populate("skillId");
+    return res.json(userSkills);
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
   }
 };

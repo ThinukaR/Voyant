@@ -51,8 +51,12 @@ class FirebaseUserRepo implements UserRepository {
         email: email,
         password: password,
       );
+
+      // ADD THIS
+      final token = await _firebaseAuth.currentUser?.getIdToken();
+      debugPrint("TOKEN: $token");
     } catch (e) {
-      debugPrint("❌ SignIn Error: $e");
+      debugPrint("SignIn Error: $e");
       rethrow;
     }
   }
@@ -73,7 +77,7 @@ class FirebaseUserRepo implements UserRepository {
 
       // Save the user immediately to Firestore
       await setUserData(myUser);
-      
+
       return myUser;
     } catch (e) {
       debugPrint("❌ SignUp Error: $e");
@@ -100,9 +104,11 @@ class FirebaseUserRepo implements UserRepository {
           "📝 setUserData: Writing user document for UID: ${myUser.userId}");
       debugPrint(
           "📝 setUserData: User data: ${myUser.toEntity().toDocument()}");
-      await usersCollection
-          .doc(myUser.userId)
-          .set(myUser.toEntity().toDocument(), SetOptions(merge: true));
+      await usersCollection.doc(myUser.userId).set({
+        ...myUser.toEntity().toDocument(),
+        'totalXP': 0,
+        'level': 1,
+      }, SetOptions(merge: true));
       debugPrint("✅ setUserData: Successfully wrote document to Firestore");
     } catch (e, stackTrace) {
       debugPrint("❌ SetUserData Error: $e");

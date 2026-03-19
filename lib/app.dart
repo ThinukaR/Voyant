@@ -3,6 +3,7 @@ import 'package:user_repository/user_repository.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:voyant/app_view.dart';
 import 'package:voyant/blocs/authentication_bloc/authentication_bloc.dart';
+import 'package:voyant/blocs/avatar_bloc/avatar_bloc.dart';
 
 class MyApp extends StatelessWidget {
   final UserRepository userRepository;
@@ -10,11 +11,34 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return RepositoryProvider<AuthenticationBloc>(
-      create: (context) => AuthenticationBloc(
-        userRepository: userRepository
+    // Create AvatarRepository instance using Firestore
+    final avatarRepository = FirestoreAvatarRepository();
+
+    return MultiRepositoryProvider(
+      providers: [
+        RepositoryProvider<UserRepository>(
+          create: (context) => userRepository,
         ),
+        RepositoryProvider<AvatarRepository>(
+          create: (context) => avatarRepository,
+        ),
+      ],
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider<AuthenticationBloc>(
+            create: (context) => AuthenticationBloc(
+              userRepository: userRepository,
+            ),
+          ),
+          BlocProvider<AvatarBloc>(
+            create: (context) => AvatarBloc(
+              avatarRepository: avatarRepository,
+              userRepository: userRepository,
+            ),
+          ),
+        ],
         child: const MyAppView(),
+      ),
     );
   }
 

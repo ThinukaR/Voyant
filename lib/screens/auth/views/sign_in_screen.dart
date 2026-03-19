@@ -16,7 +16,7 @@ class _SignInScreenState extends State<SignInScreen> {
   final passwordController = TextEditingController();
   final emailController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  
+
   bool signInRequired = false;
   bool obscurePassword = true;
   bool rememberMe = false;

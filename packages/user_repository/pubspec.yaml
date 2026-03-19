@@ -17,6 +17,17 @@ dependencies:
   rxdart: ^0.27.7
   # path: ^1.8.3
 
+  #geolocation servies
+  geolocator: ^10.1.0
+  geolocator_android: ^4.5.2
+  geolocator_apple: ^2.3.6
+
+  #google maps 
+  google_maps_flutter: ^2.5.0
+  
+  #permission handling
+  permission_handler: ^11.0.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

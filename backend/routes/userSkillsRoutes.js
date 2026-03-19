@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const userSkillController = require("../controllers/userSkillsController");
+const protect = require("../middleware/auth");
 
 // Routes
 router
@@ -15,4 +16,10 @@ router
   .delete(userSkillController.removeUserSkill);
 
 router.patch("/user/:userId", userSkillController.updateUserSkillLevel);
+
+router.use(protect);
+router.post("/select-class/:classId", userSkillController.selectClass);
+router.get("/my-skills", userSkillController.getUserSkills);
+
+
 module.exports = router;

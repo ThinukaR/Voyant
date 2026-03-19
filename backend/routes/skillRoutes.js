@@ -13,4 +13,8 @@ router
   .get(skillController.getSkill)
   .patch(skillController.updateSkill)
   .delete(skillController.deleteSkill);
+
+router.get("/classes", skillController.getAllClasses);
+router.get("/classes/:classId/skills", skillController.getSkillsForClass);
+
 module.exports = router;
