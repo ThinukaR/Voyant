@@ -68,4 +68,28 @@ class _QuestDialogueWidgetState extends State<QuestDialogueWidget>
     _referenceController.dispose();
     super.dispose();
   }
+
+void _handleChoice(DialogueOption option) {
+    if (widget.isProcessing) return; //stops double clicking 
+
+    //check - seeing if the response option needs a text input or not
+    //text input is mostly needed for things like referral codes 
+    //if it is not required then it will refer to parent for choice options 
+    if (option.conditions.requiresReference) {
+      setState(() {
+        _showReferenceInput = true;
+      });
+    } else {
+      widget.onChoiceSelected(option.id);
     }
+  }
+ 
+
+  void _submitReferenceChoice(DialogueOption option) {
+    final referenceCode = _referenceController.text.trim();
+    widget.onChoiceSelected(option.id, userInput: referenceCode); //both id and user input are sent 
+    _referenceController.clear();
+    setState(() {
+      _showReferenceInput = false;
+    });
+  }
