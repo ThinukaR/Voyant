@@ -99,3 +99,50 @@ exports.startMainQuest = async (req, res) => {
   }
 };
 
+//getting current sub quest for the user 
+exports.getCurrentSubQuest = async (req, res) => {
+  try {
+    const { userId, mainQuestId } = req.params;
+    
+    const userProgress = await UserMainQuestProgress.findOne({
+      userId,
+      mainQuestId
+    }).populate({
+      path: 'subQuestProgress.subQuestId',
+      populate: {
+        path: 'dialogueNodes'
+      }
+    });
+    
+    if (!userProgress) {
+      return res.status(404).json({ message: "Quest progress was not found" });
+    }
+    
+    //finding the current available sub-quest
+    const currentSubQuestProgress = userProgress.subQuestProgress.find(
+      subQuest => subQuest.status === 'available' || subQuest.status === 'in_progress'
+    );
+    
+    if (!currentSubQuestProgress) {
+      return res.status(404).json({ message: "No current sub-quest available" });
+    }
+    
+    //finding the current dialogue node
+    const currentNodeId = currentSubQuestProgress.currentDialogueNodeId;
+    const currentNode = currentSubQuestProgress.subQuestId.dialogueNodes.find(
+      node => node.id === currentNodeId
+    );
+    
+    if (!currentNode) {
+      return res.status(404).json({ message: "Dialogue node not found" });
+    }
+    
+    res.json({
+      subQuest: currentSubQuestProgress.subQuestId,
+      progress: currentSubQuestProgress,
+      currentNode
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
