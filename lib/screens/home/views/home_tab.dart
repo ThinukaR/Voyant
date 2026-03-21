@@ -5,6 +5,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:voyant/widgets/animated_gradient_background.dart';
 import 'package:voyant/screens/profile/views/profile_screen.dart';
+import 'package:voyant/screens/referral_system/refer_screen.dart';
+import 'package:voyant/screens/settings_screen.dart';
+import 'package:voyant/config/api_config.dart';
 
 class HomeTab extends StatefulWidget {
   final VoidCallback onTripsTap;
@@ -115,7 +118,7 @@ class _HomeTabState extends State<HomeTab> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => const ReferScreenView(),
+                                    builder: (context) => ReferScreenView(),
                                   ),
                                 );
                               },
@@ -126,7 +129,7 @@ class _HomeTabState extends State<HomeTab> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => const SettingsScreen(),
+                                    builder: (context) => SettingsScreen(),
                                   ),
                                 );
                               },
@@ -136,7 +139,7 @@ class _HomeTabState extends State<HomeTab> {
                           onTap: () => Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const ProfileScreen(),
+                              builder: (context) => ProfileScreen(),
                             ),
                           ),
                           child: Container(
