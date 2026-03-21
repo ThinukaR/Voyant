@@ -46,3 +46,9 @@ app.*.map.json
 
 #Firebase
 firebase/serviceAccountKey.json
+
+#Environment variable protection
+.env
+.env.local
+.env.development
+.env.production
