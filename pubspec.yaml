@@ -43,7 +43,8 @@ dependencies:
   google_maps_flutter: ^2.14.0
   http: ^1.2.0
   geolocator: ^10.1.1
-
+  image_picker: ^1.2.1
+  url_launcher: ^6.3.2
   user_repository:
     path: packages/user_repository
 

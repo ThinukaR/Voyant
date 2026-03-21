@@ -38,7 +38,7 @@ class Message {
 }
 
 class MessageRepository {
-  static const String _baseUrl = 'http://localhost:3000/api/messages';
+  static const String _baseUrl = 'http://192.168.8.148:3000/api/messages';
   
   static Future<void> markMessageAsRead(String messageId, String userId) async {
     try {
@@ -439,4 +439,3 @@ class _InfoPromptOverlayState extends State<InfoPromptOverlay> {
     );
   }
 }
-

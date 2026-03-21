@@ -13,7 +13,7 @@ class CosmeticScreen extends StatefulWidget {
 }
 
 class _CosmeticScreenState extends State<CosmeticScreen> {
-  static const String baseUrl = 'http://10.0.2.2:3000/api';
+  static const String baseUrl = 'http://192.168.8.148:3000/api';
 
   Map<String, dynamic>? avatar;
   List<dynamic> allItems = [];
@@ -53,15 +53,25 @@ class _CosmeticScreenState extends State<CosmeticScreen> {
         headers: headers,
       );
 
-      if (avatarRes.statusCode == 200 && itemsRes.statusCode == 200) {
+      if (mounted) {
+        if (avatarRes.statusCode == 200 && itemsRes.statusCode == 200) {
+          setState(() {
+            avatar = jsonDecode(avatarRes.body);
+            allItems = jsonDecode(itemsRes.body);
+          });
+        } else {
+          debugPrint(
+              'Failed to load cosmetics data: ${avatarRes.statusCode}, ${itemsRes.statusCode}');
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading avatar: $e');
+    } finally {
+      if (mounted) {
         setState(() {
-          avatar = jsonDecode(avatarRes.body);
-          allItems = jsonDecode(itemsRes.body);
           isLoading = false;
         });
       }
-    } catch (e) {
-      setState(() => isLoading = false);
     }
   }
 
@@ -531,6 +541,15 @@ class _CosmeticScreenState extends State<CosmeticScreen> {
 
   Widget _buildItemsGrid() {
     final items = _categoryItems;
+    if (items.isEmpty) {
+      return const Center(
+        child: Text(
+          'No items available in this category.',
+          style: TextStyle(color: Colors.white54),
+        ),
+      );
+    }
+
     final ownedIds =
         (avatar?['ownedItems'] as List<dynamic>?)
             ?.map((i) => i['_id'].toString())

@@ -4,7 +4,7 @@ import 'dart:convert';
 import '../../../components/info_prompt_popup.dart';
 
 class MessageLogsRepository {
-  static const String _baseUrl = 'http://localhost:3000/api/messages';
+  static const String _baseUrl = 'http://10.0.2.2:3000/api/messages';
   
   static Future<List<Message>> getUserMessages(String userId, {
     int page = 1,

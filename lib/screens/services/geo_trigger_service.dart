@@ -170,7 +170,7 @@ class MapLocation {
 }
 
 class GeoTriggerService {
-  static const String _baseUrl = 'http://localhost:3000/api/quest-triggers';
+  static const String _baseUrl = 'http://192.168.8.148/api/quest-triggers';
   static const Duration _checkInterval = Duration(seconds: 5); // checks every 5 seconds 
   // only detects triggers that are within a 100m range 
   static const double _triggerRadius = 100.0; 

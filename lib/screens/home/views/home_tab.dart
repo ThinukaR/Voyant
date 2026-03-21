@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:voyant/screens/referral_system/refer_screen.dart';
+import 'package:voyant/screens/settings_screen.dart';
 import 'package:voyant/widgets/animated_gradient_background.dart';
 import 'package:voyant/screens/profile/views/profile_screen.dart';
 
@@ -15,7 +17,7 @@ class HomeTab extends StatefulWidget {
 }
 
 class _HomeTabState extends State<HomeTab> {
-  static const String baseUrl = 'http://10.0.2.2:3000/api';
+  static const String baseUrl = 'http://192.168.8.148:3000/api';
 
   Map<String, dynamic>? stats;
   bool isLoading = true;
