@@ -1,39 +1,37 @@
-// UNIFIED QUEST PROGRESS MODEL
-// Handles progress for ALL quest types
 
 const mongoose = require("mongoose");
 
-// 🎯 Unified Quest Progress Schema
+//-- Quest Progress Schema 
 const userQuestProgressSchema = new mongoose.Schema({
-  // User identification
+  //identifying users
   userId: {
     type: String,
     required: true,
     ref: 'User',
   },
   
-  // Quest identification
+  //identifying quests
   questId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'UnifiedQuest',
+    ref: 'Quest',
     required: true,
   },
   
-  // Quest type for conditional fields
+  //identifying quest type
   questType: {
     type: String,
     enum: ["trip_quest", "main_quest", "location_quest", "npc_quest"],
     required: true,
   },
   
-  // Progress tracking
+  //progress tracking
   status: {
     type: String,
     enum: ["locked", "available", "in_progress", "completed"],
     default: "locked",
   },
   
-  // Task progress (for all quest types)
+  //task progress
   taskProgress: [{
     taskId: { type: mongoose.Schema.Types.ObjectId, required: true },
     isCompleted: { type: Boolean, default: false },
@@ -41,7 +39,7 @@ const userQuestProgressSchema = new mongoose.Schema({
     xpAwarded: { type: Number, default: 0 },
   }],
   
-  // Main quest specific fields
+  //main quest fields
   currentSubQuestIndex: {
     type: Number,
     default: 0,
@@ -68,16 +66,14 @@ const userQuestProgressSchema = new mongoose.Schema({
     xpEarned: { type: Number, default: 0 }
   }],
   
-  // Common progress fields
+  
   totalXPEarned: { type: Number, default: 0 },
   startedAt: { type: Date, default: Date.now },
   completedAt: { type: Date },
-  lastPlayedAt: { type: Date, default: Date.now },
-  
-  { timestamps: true },
-});
+  lastPlayedAt: { type: Date, default: Date.now }
+}, { timestamps: true });
 
-// Indexes for performance
+//indexing for performance 
 userQuestProgressSchema.index({ userId: 1, status: 1 });
 userQuestProgressSchema.index({ userId: 1, questId: 1 });
 

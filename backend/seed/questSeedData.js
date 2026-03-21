@@ -125,29 +125,29 @@ const unifiedQuests = [
 //Seed functionality 
 async function seedUnifiedQuests() {
   try {
-    console.log("🌱 Seeding unified quest system...");
+    console.log("Seeding unified quest system...");
     
-    // Clear existing data
+    //clear existing data
     await Quest.deleteMany({});
     await UserQuestProgress.deleteMany({});
     
-    // Insert unified quests
+    //insert unified quests
     await Quest.insertMany(unifiedQuests);
     
-    console.log(`✅ Seeded ${unifiedQuests.length} unified quests`);
-    console.log("🎯 Quest types seeded:");
+    console.log(`Seeded ${unifiedQuests.length} unified quests`);
+    console.log("Quest types seeded:");
     console.log("  - Main quests:", unifiedQuests.filter(q => q.questType === 'main_quest').length);
     console.log("  - Trip quests:", unifiedQuests.filter(q => q.questType === 'trip_quest').length);
     console.log("  - Location quests:", unifiedQuests.filter(q => q.questType === 'location_quest').length);
     
     process.exit(0);
   } catch (error) {
-    console.error("❌ Error seeding unified quests:", error);
+    console.error("Error seeding unified quests:", error);
     process.exit(1);
   }
 }
 
-//to run if called directly 
+//run if called directly 
 if (require.main === module) {
   seedUnifiedQuests();
 }

@@ -7,7 +7,6 @@ import 'package:voyant/widgets/animated_gradient_background.dart';
 import 'package:voyant/screens/profile/views/profile_screen.dart';
 import 'package:voyant/screens/referral_system/refer_screen.dart';
 import 'package:voyant/screens/settings_screen.dart';
-import 'package:voyant/config/api_config.dart';
 
 class HomeTab extends StatefulWidget {
   final VoidCallback onTripsTap;

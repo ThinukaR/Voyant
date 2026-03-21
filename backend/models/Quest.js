@@ -1,12 +1,9 @@
-// UNIFIED QUEST MODEL
-// Handles ALL quest types: trip_quest, main_quest, location_quest, npc_quest
-
 const mongoose = require("mongoose");
 const taskSchema = require("./Task");
 
-// 🎯 Unified Quest Schema (handles ALL quest types)
+//--Quest Schema 
 const questSchema = new mongoose.Schema({
-  // Basic quest info
+  //quest info
   title: { type: String, required: true },
   description: { type: String },
   difficulty: {
@@ -16,20 +13,20 @@ const questSchema = new mongoose.Schema({
   },
   totalXP: { type: Number, required: true },
   
-  // Quest type identification
+  //identifying quest type
   questType: {
     type: String,
     enum: ["trip_quest", "main_quest", "location_quest", "npc_quest"],
     required: true,
   },
   
-  // Location data (for all quest types)
+  //location data 
   mapPosition: {
     type: { type: String, default: "Point", enum: ["Point"] },
     coordinates: [Number],
   },
   
-  // Trip-specific fields
+  //trip based
   tripId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Trip",
@@ -45,7 +42,7 @@ const questSchema = new mongoose.Schema({
     },
   },
   
-  // Main quest specific fields
+  //main quests 
   mainQuestOrder: {
     type: Number,
     required: function() {
@@ -54,7 +51,7 @@ const questSchema = new mongoose.Schema({
   },
   prerequisites: [{
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'UnifiedQuest',
+    ref: 'Quest',
     required: function() {
       return this.questType === "main_quest";
     },
@@ -72,45 +69,33 @@ const questSchema = new mongoose.Schema({
     },
   },
   startingLocation: {
-    name: String,
+    name: { type: String },
     coordinates: {
       lat: Number,
       lng: Number
     },
-    required: function() {
-      return this.questType === "main_quest";
-    },
   },
   
-  // Location quest specific fields
+  //location based
   triggerLocation: {
     name: String,
     coordinates: {
       lat: Number,
       lng: Number
     },
-    required: function() {
-      return this.questType === "location_quest";
-    },
   },
   triggerRadius: {
     type: Number,
     default: 50,
-    required: function() {
-      return this.questType === "location_quest";
-    },
   },
   
-  // NPC quest specific fields
+  //NPC based
   npcId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'NPC',
-    required: function() {
-      return this.questType === "npc_quest";
-    },
   },
   
-  // Common fields
+ 
   tasks: [taskSchema],
   isActive: {
     type: Boolean,
@@ -120,13 +105,11 @@ const questSchema = new mongoose.Schema({
     xp: Number,
     items: [String],
     unlocks: [String],
-    cosmetics: [String], // Unified rewards system
+    cosmetics: [String], 
   },
-  
-  { timestamps: true },
-});
+}, { timestamps: true });
 
-// Indexes for performance
+//indxing for performance 
 questSchema.index({ mapPosition: "2dsphere" });
 questSchema.index({ questType: 1, isActive: 1 });
 questSchema.index({ tripId: 1 });
