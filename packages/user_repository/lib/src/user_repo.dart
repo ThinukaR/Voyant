@@ -50,4 +50,11 @@ abstract class UserRepository {
 
   Future<void> saveNotificationSettings(Map<String, dynamic> settings);
 
+  // Privacy & Security Settings
+  Future<Map<String, dynamic>> getPrivacySecuritySettings();
+
+  Future<void> savePrivacySecuritySettings(Map<String, dynamic> settings);
+
+  Future<void> logoutFromAllDevices();
+
 }

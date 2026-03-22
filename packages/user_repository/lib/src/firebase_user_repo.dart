@@ -455,4 +455,76 @@ class FirebaseUserRepo implements UserRepository {
       rethrow;
     }
   }
+
+  /// Get privacy and security settings from Firestore
+  @override
+  Future<Map<String, dynamic>> getPrivacySecuritySettings() async {
+    try {
+      final user = _firebaseAuth.currentUser;
+      if (user == null) throw Exception("User not authenticated");
+
+      final doc = await usersCollection
+          .doc(user.uid)
+          .collection('settings')
+          .doc('privacySecurity')
+          .get();
+
+      if (doc.exists) {
+        return doc.data() ?? {};
+      }
+      return {
+        'accountSecurity': {},
+        'privacyControls': {},
+        'deviceManagement': {},
+        'permissions': {},
+        'alertsMonitoring': {},
+        'blockSafety': {},
+      };
+    } catch (e) {
+      debugPrint("❌ Get Privacy Security Settings Error: $e");
+      rethrow;
+    }
+  }
+
+  /// Save privacy and security settings to Firestore
+  @override
+  Future<void> savePrivacySecuritySettings(Map<String, dynamic> settings) async {
+    try {
+      final user = _firebaseAuth.currentUser;
+      if (user == null) throw Exception("User not authenticated");
+
+      await usersCollection
+          .doc(user.uid)
+          .collection('settings')
+          .doc('privacySecurity')
+          .set(settings, SetOptions(merge: true));
+
+      debugPrint("✅ Privacy & Security settings saved successfully");
+    } catch (e) {
+      debugPrint("❌ Save Privacy Security Settings Error: $e");
+      rethrow;
+    }
+  }
+
+  /// Logout from all devices
+  @override
+  Future<void> logoutFromAllDevices() async {
+    try {
+      final user = _firebaseAuth.currentUser;
+      if (user == null) throw Exception("User not authenticated");
+
+      // Sign out from current device
+      await _firebaseAuth.signOut();
+
+      // Update logout timestamp in Firestore
+      await usersCollection.doc(user.uid).update({
+        'allDevicesLogoutAt': FieldValue.serverTimestamp(),
+      });
+
+      debugPrint("✅ Logged out from all devices");
+    } catch (e) {
+      debugPrint("❌ Logout All Devices Error: $e");
+      rethrow;
+    }
+  }
 }
