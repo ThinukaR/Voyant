@@ -404,4 +404,55 @@ class FirebaseUserRepo implements UserRepository {
     }
   }
 
+  /// Get notification settings from Firestore
+  @override
+  Future<Map<String, dynamic>> getNotificationSettings() async {
+    try {
+      final user = _firebaseAuth.currentUser;
+      if (user == null) throw Exception("User not authenticated");
+
+      final doc = await usersCollection
+          .doc(user.uid)
+          .collection('settings')
+          .doc('notifications')
+          .get();
+
+      if (doc.exists) {
+        return doc.data() ?? {};
+      }
+      return {
+        'general': {},
+        'activity': {},
+        'social': {},
+        'reminders': {},
+        'messages': {},
+        'promotions': {},
+        'preferences': {},
+        'privacy': {},
+      };
+    } catch (e) {
+      debugPrint("❌ Get Notification Settings Error: $e");
+      rethrow;
+    }
+  }
+
+  /// Save notification settings to Firestore
+  @override
+  Future<void> saveNotificationSettings(Map<String, dynamic> settings) async {
+    try {
+      final user = _firebaseAuth.currentUser;
+      if (user == null) throw Exception("User not authenticated");
+
+      await usersCollection
+          .doc(user.uid)
+          .collection('settings')
+          .doc('notifications')
+          .set(settings, SetOptions(merge: true));
+
+      debugPrint("✅ Notification settings saved successfully");
+    } catch (e) {
+      debugPrint("❌ Save Notification Settings Error: $e");
+      rethrow;
+    }
+  }
 }

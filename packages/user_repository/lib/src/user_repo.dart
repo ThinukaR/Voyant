@@ -45,4 +45,9 @@ abstract class UserRepository {
 
   Future<void> deleteAccountWithCleanup();
 
+  // Notification Settings
+  Future<Map<String, dynamic>> getNotificationSettings();
+
+  Future<void> saveNotificationSettings(Map<String, dynamic> settings);
+
 }
