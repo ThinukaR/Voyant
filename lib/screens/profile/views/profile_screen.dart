@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:voyant/blocs/authentication_bloc/authentication_bloc.dart';
 import 'package:voyant/components/badge_build.dart';
-import 'package:voyant/components/quest_display_section.dart';
 import 'package:voyant/widgets/animated_gradient_background.dart';
 import '../../referral_system/refer_screen.dart';
 
