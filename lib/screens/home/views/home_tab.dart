@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:voyant/screens/referral_system/refer_screen.dart';
-import 'package:voyant/screens/settings_screen.dart';
+import 'package:voyant/screens/settings/settings_screen.dart';
 import 'package:voyant/widgets/animated_gradient_background.dart';
 import 'package:voyant/screens/profile/views/profile_screen.dart';
 

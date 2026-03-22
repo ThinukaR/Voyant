@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:voyant/screens/home/views/mapscreen.dart';
-import 'package:voyant/screens/map/map.dart';
 import 'package:voyant/screens/home/views/home_tab.dart';
 import 'package:voyant/screens/trips/views/trips_list_screen.dart';
 import 'package:voyant/screens/avatar/views/cosmetic_screen.dart';
-import 'package:voyant/screens/avatar/views/avatar_screen.dart';
 import 'package:voyant/screens/skillTree/skillTree.dart';
 
 class RootScreen extends StatefulWidget {
