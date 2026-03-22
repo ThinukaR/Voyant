@@ -5,6 +5,7 @@ import 'package:voyant/app_view.dart';
 import 'package:voyant/blocs/authentication_bloc/authentication_bloc.dart';
 import 'package:voyant/blocs/avatar_bloc/avatar_bloc.dart';
 import 'package:voyant/blocs/account_settings_bloc/account_settings_bloc.dart';
+import 'package:voyant/blocs/notification_settings_bloc/notification_settings_bloc.dart';
 
 class MyApp extends StatelessWidget {
   final UserRepository userRepository;
@@ -39,6 +40,11 @@ class MyApp extends StatelessWidget {
           ),
           BlocProvider<AccountSettingsBloc>(
             create: (context) => AccountSettingsBloc(
+              userRepository: userRepository,
+            ),
+          ),
+          BlocProvider<NotificationSettingsBloc>(
+            create: (context) => NotificationSettingsBloc(
               userRepository: userRepository,
             ),
           ),
