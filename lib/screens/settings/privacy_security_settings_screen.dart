@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:voyant/blocs/privacy_security_settings_bloc/privacy_security_settings_bloc.dart';
 import 'package:voyant/widgets/animated_gradient_background.dart';
 
 class PrivacySecuritySettingsScreen extends StatefulWidget {
@@ -11,46 +13,43 @@ class PrivacySecuritySettingsScreen extends StatefulWidget {
 
 class _PrivacySecuritySettingsScreenState
     extends State<PrivacySecuritySettingsScreen> {
-  // Account Security
-  bool _twoFactorEnabled = false;
-  bool _biometricLoginEnabled = false;
-  String _biometricType = 'Fingerprint';
+  late TextEditingController _currentPasswordController;
+  late TextEditingController _newPasswordController;
+  late TextEditingController _confirmPasswordController;
 
-  // Privacy Controls
-  String _profileVisibility = 'Public';
-  bool _activityVisibilityEnabled = true;
-  bool _locationSharingEnabled = true;
+  @override
+  void initState() {
+    super.initState();
+    _currentPasswordController = TextEditingController();
+    _newPasswordController = TextEditingController();
+    _confirmPasswordController = TextEditingController();
+    
+    // Load settings when screen initializes
+    context.read<PrivacySecuritySettingsBloc>().add(
+      const LoadPrivacySecuritySettingsEvent(),
+    );
+  }
 
-  // Device Management
-  List<String> _activeSessions = ['Current Device', 'iPhone 14', 'iPad Pro'];
+  @override
+  void dispose() {
+    _currentPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
 
-  // Permissions
-  bool _locationPermission = true;
-  bool _cameraPermission = true;
-  bool _storagePermission = true;
-
-  // Alerts & Monitoring
-  bool _suspiciousLoginAlerts = true;
-  bool _securityNotifications = true;
-
-  // Block & Safety
-  List<String> _blockedUsers = [];
-  int _blockedCount = 0;
-
-  final List<String> _profileVisibilityOptions = ['Public', 'Private', 'Friends Only'];
-  final List<String> _biometricOptions = ['Fingerprint', 'Face ID'];
 
   void _saveChanges() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Privacy & Security settings saved successfully!'),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 2),
-      ),
+    context.read<PrivacySecuritySettingsBloc>().add(
+      const SaveAllSettingsEvent(),
     );
   }
 
   void _changePassword() {
+    _currentPasswordController.clear();
+    _newPasswordController.clear();
+    _confirmPasswordController.clear();
+    
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -64,6 +63,7 @@ class _PrivacySecuritySettingsScreenState
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
+                controller: _currentPasswordController,
                 obscureText: true,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
@@ -76,6 +76,7 @@ class _PrivacySecuritySettingsScreenState
               ),
               const SizedBox(height: 12),
               TextField(
+                controller: _newPasswordController,
                 obscureText: true,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
@@ -88,6 +89,7 @@ class _PrivacySecuritySettingsScreenState
               ),
               const SizedBox(height: 12),
               TextField(
+                controller: _confirmPasswordController,
                 obscureText: true,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
@@ -107,13 +109,23 @@ class _PrivacySecuritySettingsScreenState
             ),
             TextButton(
               onPressed: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Password changed successfully!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
+                if (_newPasswordController.text == _confirmPasswordController.text) {
+                  Navigator.pop(context);
+                  // Change password via BLoC (from account settings)
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Password change initiated. Verify in account settings.'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Passwords do not match'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               },
               child: const Text('Update', style: TextStyle(color: Colors.cyanAccent)),
             ),
@@ -145,11 +157,8 @@ class _PrivacySecuritySettingsScreenState
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Logged out from all devices'),
-                    backgroundColor: Colors.orange,
-                  ),
+                context.read<PrivacySecuritySettingsBloc>().add(
+                  const LogoutAllDevicesEvent(),
                 );
               },
               child: const Text('Logout', style: TextStyle(color: Colors.red)),
@@ -184,7 +193,7 @@ class _PrivacySecuritySettingsScreenState
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Account deletion initiated'),
+                    content: Text('Account deletion initiated. Verify in account settings.'),
                     backgroundColor: Colors.red,
                   ),
                 );
@@ -197,7 +206,9 @@ class _PrivacySecuritySettingsScreenState
     );
   }
 
-  void _showBlockedUsers() {
+  void _showBlockedUsers(Map<String, dynamic> blockSafetySettings) {
+    final blockedUsers = blockSafetySettings['blockedUsers'] as List? ?? [];
+    
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -207,7 +218,7 @@ class _PrivacySecuritySettingsScreenState
             'Blocked Users',
             style: TextStyle(color: Colors.white),
           ),
-          content: _blockedCount == 0
+          content: blockedUsers.isEmpty
               ? const Text(
                   'You have not blocked any users.',
                   style: TextStyle(color: Colors.white70),
@@ -215,22 +226,24 @@ class _PrivacySecuritySettingsScreenState
               : SizedBox(
                   width: double.maxFinite,
                   child: ListView.builder(
-                    itemCount: _blockedUsers.length,
+                    itemCount: blockedUsers.length,
                     itemBuilder: (context, index) {
                       return ListTile(
                         title: Text(
-                          _blockedUsers[index],
+                          blockedUsers[index] as String,
                           style: const TextStyle(color: Colors.white),
                         ),
                         trailing: IconButton(
                           icon: const Icon(Icons.close, color: Colors.red),
                           onPressed: () {
-                            setState(() {
-                              _blockedUsers.removeAt(index);
-                              _blockedCount--;
-                            });
+                            final updated = List<String>.from(blockedUsers);
+                            updated.removeAt(index);
+                            context.read<PrivacySecuritySettingsBloc>().add(
+                              UpdateBlockSafetyEvent({
+                                'blockedUsers': updated,
+                              }),
+                            );
                             Navigator.pop(context);
-                            _showBlockedUsers();
                           },
                         ),
                       );
@@ -252,361 +265,576 @@ class _PrivacySecuritySettingsScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: AnimatedGradientBackground(
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    const Text(
-                      'Privacy & Security',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
+      body: BlocListener<PrivacySecuritySettingsBloc, PrivacySecuritySettingsState>(
+        listener: (context, state) {
+          if (state.status == PrivacySecuritySettingsStatus.success) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Privacy & Security settings saved successfully!'),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 2),
               ),
-
-              // Content
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Column(
-                      children: [
-                        // Account Security Section
-                        _buildSectionCard(
-                          title: 'Account Security',
-                          icon: Icons.lock,
-                          children: [
-                            _buildActionButton(
-                              'Change Password',
-                              Icons.vpn_key,
-                              _changePassword,
-                            ),
-                            const SizedBox(height: 12),
-                            _buildToggleTile(
-                              'Two-Factor Authentication',
-                              _twoFactorEnabled,
-                              (value) {
-                                setState(() => _twoFactorEnabled = value);
-                              },
-                            ),
-                            const SizedBox(height: 12),
-                            _buildToggleTile(
-                              'Biometric Login',
-                              _biometricLoginEnabled,
-                              (value) {
-                                setState(() => _biometricLoginEnabled = value);
-                              },
-                            ),
-                            if (_biometricLoginEnabled) ...[
-                              const SizedBox(height: 12),
-                              _buildDropdownField(
-                                label: 'Biometric Type',
-                                value: _biometricType,
-                                items: _biometricOptions,
-                                onChanged: (value) {
-                                  setState(() => _biometricType = value);
-                                },
-                              ),
-                            ],
-                          ],
+            );
+          } else if (state.status == PrivacySecuritySettingsStatus.failure) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error: ${state.errorMessage ?? "Unknown error"}'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+        child: AnimatedGradientBackground(
+          child: SafeArea(
+            child: Column(
+              children: [
+                // Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      const Text(
+                        'Privacy & Security',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
+                      ),
+                    ],
+                  ),
+                ),
 
-                        const SizedBox(height: 16),
-
-                        // Privacy Controls Section
-                        _buildSectionCard(
-                          title: 'Privacy Controls',
-                          icon: Icons.visibility,
-                          children: [
-                            _buildDropdownField(
-                              label: 'Profile Visibility',
-                              value: _profileVisibility,
-                              items: _profileVisibilityOptions,
-                              onChanged: (value) {
-                                setState(() => _profileVisibility = value);
-                              },
-                            ),
-                            const SizedBox(height: 16),
-                            _buildToggleTile(
-                              'Activity Visibility',
-                              _activityVisibilityEnabled,
-                              (value) {
-                                setState(() => _activityVisibilityEnabled = value);
-                              },
-                            ),
-                            const SizedBox(height: 12),
-                            _buildToggleTile(
-                              'Location Sharing',
-                              _locationSharingEnabled,
-                              (value) {
-                                setState(() => _locationSharingEnabled = value);
-                              },
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Data Protection Section
-                        _buildSectionCard(
-                          title: 'Data Protection',
-                          icon: Icons.security,
-                          children: [
-                            _buildActionButton(
-                              'Download My Data',
-                              Icons.download,
-                              () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Starting data download...'),
-                                    backgroundColor: Colors.blue,
-                                  ),
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 12),
-                            _buildActionButton(
-                              'Delete Account',
-                              Icons.delete_forever,
-                              _deleteAccount,
-                              isDestructive: true,
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Device Management Section
-                        _buildSectionCard(
-                          title: 'Device Management',
-                          icon: Icons.devices,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Active Sessions',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                ..._activeSessions.asMap().entries.map((entry) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 8),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.05),
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: Colors.cyanAccent
-                                              .withOpacity(0.3),
-                                        ),
+                // Content
+                Expanded(
+                  child: Stack(
+                    children: [
+                      SingleChildScrollView(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: BlocBuilder<PrivacySecuritySettingsBloc,
+                              PrivacySecuritySettingsState>(
+                            builder: (context, state) {
+                              return Column(
+                                children: [
+                                  // Account Security Section
+                                  _buildSectionCard(
+                                    title: 'Account Security',
+                                    icon: Icons.lock,
+                                    children: [
+                                      _buildActionButton(
+                                        'Change Password',
+                                        Icons.vpn_key,
+                                        _changePassword,
                                       ),
-                                      child: Row(
+                                      const SizedBox(height: 12),
+                                      _buildToggleTile(
+                                        'Two-Factor Authentication',
+                                        state.accountSecuritySettings['twoFactorEnabled'] ??
+                                            false,
+                                        (value) {
+                                          context
+                                              .read<
+                                                  PrivacySecuritySettingsBloc>()
+                                              .add(
+                                            UpdateAccountSecurityEvent({
+                                              'twoFactorEnabled': value,
+                                            }),
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(height: 12),
+                                      _buildToggleTile(
+                                        'Biometric Login',
+                                        state.accountSecuritySettings[
+                                                'biometricLoginEnabled'] ??
+                                            false,
+                                        (value) {
+                                          context
+                                              .read<
+                                                  PrivacySecuritySettingsBloc>()
+                                              .add(
+                                            UpdateAccountSecurityEvent({
+                                              'biometricLoginEnabled': value,
+                                            }),
+                                          );
+                                        },
+                                      ),
+                                      if (state.accountSecuritySettings[
+                                              'biometricLoginEnabled'] ??
+                                          false) ...[
+                                        const SizedBox(height: 12),
+                                        _buildDropdownField(
+                                          label: 'Biometric Type',
+                                          value: state.accountSecuritySettings[
+                                                  'biometricType'] ??
+                                              'Fingerprint',
+                                          items: ['Fingerprint', 'Face ID'],
+                                          onChanged: (value) {
+                                            context
+                                                .read<
+                                                    PrivacySecuritySettingsBloc>()
+                                                .add(
+                                                  UpdateAccountSecurityEvent({
+                                                    'biometricType': value,
+                                                  }),
+                                                );
+                                          },
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+
+                                  const SizedBox(height: 16),
+
+                                  // Privacy Controls Section
+                                  _buildSectionCard(
+                                    title: 'Privacy Controls',
+                                    icon: Icons.visibility,
+                                    children: [
+                                      _buildDropdownField(
+                                        label: 'Profile Visibility',
+                                        value: state
+                                                .privacyControlSettings[
+                                            'profileVisibility'] ??
+                                            'Public',
+                                        items: [
+                                          'Public',
+                                          'Private',
+                                          'Friends Only'
+                                        ],
+                                        onChanged: (value) {
+                                          context
+                                              .read<
+                                                  PrivacySecuritySettingsBloc>()
+                                              .add(
+                                            UpdatePrivacyControlsEvent({
+                                              'profileVisibility': value,
+                                            }),
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(height: 16),
+                                      _buildToggleTile(
+                                        'Activity Visibility',
+                                        state.privacyControlSettings[
+                                                'activityVisibilityEnabled'] ??
+                                            true,
+                                        (value) {
+                                          context
+                                              .read<
+                                                  PrivacySecuritySettingsBloc>()
+                                              .add(
+                                            UpdatePrivacyControlsEvent({
+                                              'activityVisibilityEnabled': value,
+                                            }),
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(height: 12),
+                                      _buildToggleTile(
+                                        'Location Sharing',
+                                        state.privacyControlSettings[
+                                                'locationSharingEnabled'] ??
+                                            true,
+                                        (value) {
+                                          context
+                                              .read<
+                                                  PrivacySecuritySettingsBloc>()
+                                              .add(
+                                            UpdatePrivacyControlsEvent({
+                                              'locationSharingEnabled': value,
+                                            }),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
+
+                                  const SizedBox(height: 16),
+
+                                  // Data Protection Section
+                                  _buildSectionCard(
+                                    title: 'Data Protection',
+                                    icon: Icons.security,
+                                    children: [
+                                      _buildActionButton(
+                                        'Download My Data',
+                                        Icons.download,
+                                        () {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                  'Starting data download...'),
+                                              backgroundColor: Colors.blue,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(height: 12),
+                                      _buildActionButton(
+                                        'Delete Account',
+                                        Icons.delete_forever,
+                                        _deleteAccount,
+                                        isDestructive: true,
+                                      ),
+                                    ],
+                                  ),
+
+                                  const SizedBox(height: 16),
+
+                                  // Device Management Section
+                                  _buildSectionCard(
+                                    title: 'Device Management',
+                                    icon: Icons.devices,
+                                    children: [
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Active Sessions',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          if (state.activeSessions != null &&
+                                              state.activeSessions!.isNotEmpty)
+                                            ...state.activeSessions!
+                                                .asMap()
+                                                .entries
+                                                .map((entry) {
+                                                  final session = entry.value;
+                                                  final index = entry.key;
+                                                  return Padding(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                            bottom: 8),
+                                                    child: Container(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                              12),
+                                                      decoration:
+                                                          BoxDecoration(
+                                                        color: Colors.white
+                                                            .withOpacity(0.05),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(8),
+                                                        border: Border.all(
+                                                          color: Colors
+                                                              .cyanAccent
+                                                              .withOpacity(
+                                                                  0.3),
+                                                        ),
+                                                      ),
+                                                      child: Row(
+                                                        mainAxisAlignment:
+                                                            MainAxisAlignment
+                                                                .spaceBetween,
+                                                        children: [
+                                                          Row(
+                                                            children: [
+                                                              const Icon(
+                                                                Icons
+                                                                    .devices_other,
+                                                                color: Colors
+                                                                    .cyanAccent,
+                                                                size: 18,
+                                                              ),
+                                                              const SizedBox(
+                                                                  width: 8),
+                                                              Text(
+                                                                session[
+                                                                    'device'] ??
+                                                                    'Unknown Device',
+                                                                style:
+                                                                    const TextStyle(
+                                                                  color: Colors
+                                                                      .white,
+                                                                  fontSize: 13,
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                          if (index != 0)
+                                                            GestureDetector(
+                                                              onTap: () {
+                                                                // Remove session
+                                                              },
+                                                              child:
+                                                                  const Icon(
+                                                                Icons.close,
+                                                                color: Colors
+                                                                    .red,
+                                                                size: 18,
+                                                              ),
+                                                            ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  );
+                                                })
+                                                .toList()
+                                          else
+                                            const Text(
+                                              'No active sessions',
+                                              style: TextStyle(
+                                                color: Colors.white70,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          const SizedBox(height: 12),
+                                          _buildActionButton(
+                                            'Logout from All Devices',
+                                            Icons.logout,
+                                            _logoutAllDevices,
+                                            isDestructive: true,
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+
+                                  const SizedBox(height: 16),
+
+                                  // Permissions Section
+                                  _buildSectionCard(
+                                    title: 'Permissions',
+                                    icon: Icons.admin_panel_settings,
+                                    children: [
+                                      _buildToggleTile(
+                                        'Location Access',
+                                        state.permissionsSettings[
+                                                'locationPermission'] ??
+                                            true,
+                                        (value) {
+                                          context
+                                              .read<
+                                                  PrivacySecuritySettingsBloc>()
+                                              .add(
+                                            UpdatePermissionsEvent({
+                                              'locationPermission': value,
+                                            }),
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(height: 12),
+                                      _buildToggleTile(
+                                        'Camera Access',
+                                        state.permissionsSettings[
+                                                'cameraPermission'] ??
+                                            true,
+                                        (value) {
+                                          context
+                                              .read<
+                                                  PrivacySecuritySettingsBloc>()
+                                              .add(
+                                            UpdatePermissionsEvent({
+                                              'cameraPermission': value,
+                                            }),
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(height: 12),
+                                      _buildToggleTile(
+                                        'Storage Access',
+                                        state.permissionsSettings[
+                                                'storagePermission'] ??
+                                            true,
+                                        (value) {
+                                          context
+                                              .read<
+                                                  PrivacySecuritySettingsBloc>()
+                                              .add(
+                                            UpdatePermissionsEvent({
+                                              'storagePermission': value,
+                                            }),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
+
+                                  const SizedBox(height: 16),
+
+                                  // Alerts & Monitoring Section
+                                  _buildSectionCard(
+                                    title: 'Alerts & Monitoring',
+                                    icon: Icons.notifications_active,
+                                    children: [
+                                      _buildToggleTile(
+                                        'Suspicious Login Alerts',
+                                        state.alertsMonitoringSettings[
+                                                'suspiciousLoginAlerts'] ??
+                                            true,
+                                        (value) {
+                                          context
+                                              .read<
+                                                  PrivacySecuritySettingsBloc>()
+                                              .add(
+                                            UpdateAlertsMonitoringEvent({
+                                              'suspiciousLoginAlerts': value,
+                                            }),
+                                          );
+                                        },
+                                      ),
+                                      const SizedBox(height: 12),
+                                      _buildToggleTile(
+                                        'Security Notifications',
+                                        state.alertsMonitoringSettings[
+                                                'securityNotifications'] ??
+                                            true,
+                                        (value) {
+                                          context
+                                              .read<
+                                                  PrivacySecuritySettingsBloc>()
+                                              .add(
+                                            UpdateAlertsMonitoringEvent({
+                                              'securityNotifications': value,
+                                            }),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
+
+                                  const SizedBox(height: 16),
+
+                                  // Block & Safety Section
+                                  _buildSectionCard(
+                                    title: 'Block & Safety',
+                                    icon: Icons.block,
+                                    children: [
+                                      Row(
                                         mainAxisAlignment:
                                             MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Row(
-                                            children: [
-                                              const Icon(
-                                                Icons.devices_other,
-                                                color: Colors.cyanAccent,
-                                                size: 18,
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Text(
-                                                entry.value,
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 13,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          if (entry.key != 0)
-                                            GestureDetector(
-                                              onTap: () {
-                                                setState(() {
-                                                  _activeSessions
-                                                      .removeAt(entry.key);
-                                                });
-                                              },
-                                              child: const Icon(
-                                                Icons.close,
-                                                color: Colors.red,
-                                                size: 18,
-                                              ),
+                                          Text(
+                                            'Blocked Users: ${(state.blockSafetySettings['blockedUsers'] as List?)?.length ?? 0}',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 14,
                                             ),
+                                          ),
+                                          ElevatedButton.icon(
+                                            onPressed: () => _showBlockedUsers(
+                                              state.blockSafetySettings,
+                                            ),
+                                            icon: const Icon(Icons.list),
+                                            label: const Text('View'),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                                  Colors.cyanAccent,
+                                              foregroundColor:
+                                                  const Color(0xFF1B0033),
+                                            ),
+                                          ),
                                         ],
                                       ),
+                                      const SizedBox(height: 12),
+                                      _buildActionButton(
+                                        'Report User/Content',
+                                        Icons.flag,
+                                        () {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                  'Report submitted. We\'ll review it soon.'),
+                                              backgroundColor: Colors.orange,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
+
+                                  const SizedBox(height: 30),
+
+                                  // Save Button
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton(
+                                      onPressed: state.status ==
+                                              PrivacySecuritySettingsStatus
+                                                  .loading
+                                          ? null
+                                          : _saveChanges,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.cyanAccent,
+                                        disabledBackgroundColor:
+                                            Colors.cyanAccent
+                                                .withOpacity(0.5),
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 16),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                      ),
+                                      child: state.status ==
+                                              PrivacySecuritySettingsStatus
+                                                  .loading
+                                          ? const SizedBox(
+                                              height: 20,
+                                              width: 20,
+                                              child:
+                                                  CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                              ),
+                                            )
+                                          : const Text(
+                                              'Save Changes',
+                                              style: TextStyle(
+                                                color: Color(0xFF1B0033),
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                              ),
+                                            ),
                                     ),
-                                  );
-                                }).toList(),
-                                const SizedBox(height: 12),
-                                _buildActionButton(
-                                  'Logout from All Devices',
-                                  Icons.logout,
-                                  _logoutAllDevices,
-                                  isDestructive: true,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Permissions Section
-                        _buildSectionCard(
-                          title: 'Permissions',
-                          icon: Icons.admin_panel_settings,
-                          children: [
-                            _buildToggleTile(
-                              'Location Access',
-                              _locationPermission,
-                              (value) {
-                                setState(() => _locationPermission = value);
-                              },
-                            ),
-                            const SizedBox(height: 12),
-                            _buildToggleTile(
-                              'Camera Access',
-                              _cameraPermission,
-                              (value) {
-                                setState(() => _cameraPermission = value);
-                              },
-                            ),
-                            const SizedBox(height: 12),
-                            _buildToggleTile(
-                              'Storage Access',
-                              _storagePermission,
-                              (value) {
-                                setState(() => _storagePermission = value);
-                              },
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Alerts & Monitoring Section
-                        _buildSectionCard(
-                          title: 'Alerts & Monitoring',
-                          icon: Icons.notifications_active,
-                          children: [
-                            _buildToggleTile(
-                              'Suspicious Login Alerts',
-                              _suspiciousLoginAlerts,
-                              (value) {
-                                setState(() => _suspiciousLoginAlerts = value);
-                              },
-                            ),
-                            const SizedBox(height: 12),
-                            _buildToggleTile(
-                              'Security Notifications',
-                              _securityNotifications,
-                              (value) {
-                                setState(() => _securityNotifications = value);
-                              },
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Block & Safety Section
-                        _buildSectionCard(
-                          title: 'Block & Safety',
-                          icon: Icons.block,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Blocked Users: $_blockedCount',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
                                   ),
-                                ),
-                                ElevatedButton.icon(
-                                  onPressed: _showBlockedUsers,
-                                  icon: const Icon(Icons.list),
-                                  label: const Text('View'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.cyanAccent,
-                                    foregroundColor: const Color(0xFF1B0033),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            _buildActionButton(
-                              'Report User/Content',
-                              Icons.flag,
-                              () {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text(
-                                        'Report submitted. We\'ll review it soon.'),
-                                    backgroundColor: Colors.orange,
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
 
-                        const SizedBox(height: 30),
-
-                        // Save Button
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: _saveChanges,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.cyanAccent,
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: const Text(
-                              'Save Changes',
-                              style: TextStyle(
-                                color: Color(0xFF1B0033),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
+                                  const SizedBox(height: 20),
+                                ],
+                              );
+                            },
                           ),
                         ),
-
-                        const SizedBox(height: 20),
-                      ],
-                    ),
+                      ),
+                      // Loading overlay
+                      BlocBuilder<PrivacySecuritySettingsBloc,
+                          PrivacySecuritySettingsState>(
+                        builder: (context, state) {
+                          if (state.status ==
+                              PrivacySecuritySettingsStatus.loading) {
+                            return Container(
+                              color: Colors.black.withOpacity(0.3),
+                              child: const Center(
+                                child: CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.cyanAccent,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
