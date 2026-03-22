@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:voyant/screens/trips/views/trip_screen.dart';
-import 'package:voyant/widgets/animated_gradient_background.dart';
+import '../../../models/quest_models.dart';
+import '../../../services/quest_service.dart';
+import '../../quest/views/quest_hub_screen.dart';
+import '../../../widgets/animated_gradient_background.dart';
 
 class TripsTab extends StatefulWidget {
   const TripsTab({super.key});
@@ -13,44 +14,35 @@ class TripsTab extends StatefulWidget {
 }
 
 class _TripsTabState extends State<TripsTab> {
-  static const String baseUrl = 'http://10.0.2.2:3000/api';
-
   List<dynamic> trips = [];
+  List<Quest> mainQuests = [];
   bool isLoading = true;
   String? error;
 
   @override
   void initState() {
     super.initState();
-    _loadTrips();
+    _loadTripsAndQuests();
   }
 
-  Future<String?> _getToken() async {
-    return await FirebaseAuth.instance.currentUser?.getIdToken();
-  }
-
-  Future<void> _loadTrips() async {
+  Future<void> _loadTripsAndQuests() async {
     try {
-      final token = await _getToken();
-      final response = await http.get(
-        Uri.parse('$baseUrl/user-trips'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
+      setState(() {
+        isLoading = true;
+        error = null;
+      });
 
-      if (response.statusCode == 200) {
-        setState(() {
-          trips = jsonDecode(response.body);
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          error = 'Failed to load trips';
-          isLoading = false;
-        });
-      }
+      //uses quest service to load quest 
+      final questResponse = await QuestService().getAllUserQuests();
+      
+      setState(() {
+        mainQuests = questResponse.mainQuests;
+        trips = questResponse.trips;
+        isLoading = false;
+      });
     } catch (e) {
       setState(() {
-        error = 'Connection error: $e';
+        error = e.toString();
         isLoading = false;
       });
     }
@@ -58,130 +50,232 @@ class _TripsTabState extends State<TripsTab> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: AnimatedGradientBackground(
-        child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Padding(
-                padding: EdgeInsets.all(20),
-                child: Text(
-                  'My Trips',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              Expanded(
-                child: isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          color: Color(0xFFB020DD),
-                        ),
-                      )
-                    : error != null
-                    ? Center(
-                        child: Text(
-                          error!,
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                      )
-                    : trips.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'No trips yet',
-                          style: TextStyle(color: Colors.white54),
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        itemCount: trips.length,
-                        itemBuilder: (context, index) {
-                          return _buildTripCard(trips[index]);
-                        },
-                      ),
-              ),
-            ],
+    return AnimatedGradientBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          title: const Text(
+            'Trips & Quests',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
+        body: isLoading
+            ? const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              )
+            : error != null
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: Colors.white70,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Error loading data',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 18,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          error!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: _loadTripsAndQuests,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF4A148C),
+                            foregroundColor: Colors.white,
+                          ),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  )
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+
+                        //main quest section 
+                        if (mainQuests.isNotEmpty) ...[
+                          const Text(
+                            'Main Quests',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          ...mainQuests.map((quest) => _buildQuestCard(quest)),
+                          const SizedBox(height: 24),
+                        ],
+                        
+                        //trips 
+                        if (trips.isNotEmpty) ...[
+                          const Text(
+                            'Trips',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          ...trips.map((trip) => _buildTripCard(trip)),
+                        ],
+                        
+                        //View all quests 
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => const QuestHubScreen(
+                                    userId: 'current-user', 
+                                  ),
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF4A148C),
+                              foregroundColor: Colors.white,
+                            ),
+                            child: const Text('View All Quests'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
       ),
     );
   }
 
-  Widget _buildTripCard(Map<String, dynamic> trip) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                TripDetailScreen(tripId: trip['_id'], tripName: trip['name']),
+  Widget _buildQuestCard(Quest quest) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF4A148C).withOpacity(0.3)),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(16),
+        leading: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: const Color(0xFF4A148C).withOpacity(0.2),
+            borderRadius: BorderRadius.circular(8),
           ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.07),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          child: const Icon(
+            Icons.campaign,
+            color: Color(0xFF4A148C),
+          ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Text('🏯', style: TextStyle(fontSize: 32)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        trip['name'] ?? '',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        '${trip['xpGained']} XP gained',
-                        style: TextStyle(
-                          color: Colors.grey.shade400,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.green.withOpacity(0.5)),
-                  ),
-                  child: const Text(
-                    'Active',
-                    style: TextStyle(
-                      color: Colors.green,
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
+        title: Text(
+          quest.title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        subtitle: Text(
+          quest.description,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.7),
+            fontSize: 14,
+          ),
+        ),
+        trailing: Text(
+          '${quest.totalXP} XP',
+          style: const TextStyle(
+            color: Color(0xFF4A148C),
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const QuestHubScreen(
+                userId: 'current-user',
+              ),
             ),
-          ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildTripCard(dynamic trip) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF4A148C).withOpacity(0.3)),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(16),
+        leading: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: const Color(0xFF4A148C).withOpacity(0.2),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Icon(
+            Icons.card_travel,
+            color: Color(0xFF4A148C),
+          ),
         ),
+        title: Text(
+          trip['tripName'] ?? 'Unknown Trip',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        subtitle: Text(
+          trip['description'] ?? 'No description',
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.7),
+            fontSize: 14,
+          ),
+        ),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const QuestHubScreen(
+                userId: 'current-user',
+              ),
+            ),
+          );
+        },
       ),
     );
   }

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:voyant/screens/quest/views/quest_start_screen.dart';
+import '../../models/quest_models.dart';
+import '../../services/quest_service.dart';
+import '../quest/views/quest_start_screen.dart';
+import '../quest/views/quest_screen.dart';
 
 class Map extends StatefulWidget {
   const Map({super.key});
@@ -119,12 +122,13 @@ class _MapState extends State<Map> {
     _overlayEntry = null;
   }
 
-  void _onGalleMarkerTapped() {
+  void _onGalleMarkerTapped() async {
     _showCustomInfoWindow(
       'Galle',
       'Historic coastal city',
     );
     
+    //starting galle quest 
     Future.delayed(const Duration(milliseconds: 500), () {
       _removeCustomInfoWindow();
       if (mounted) {
@@ -132,13 +136,63 @@ class _MapState extends State<Map> {
           context: context,
           isScrollControlled: true,
           backgroundColor: Colors.transparent,
-          builder: (context) => DraggableScrollableSheet(
-            initialChildSize: 0.5,
-            minChildSize: 0.3,
-            maxChildSize: 0.95,
-            builder: (context, scrollController) => const QuestStartScreen(
-              questTitle: 'Quest Started',
-            ),
+          builder: (context) => QuestStartScreen(
+            questTitle: 'Galle Quest Started',
+            questId: 'galle-main-quest', // Use known quest ID
+            onQuestStarted: () {
+              // Navigate to quest screen
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => QuestScreen(
+                    quest: Quest(
+                      id: 'galle-main-quest',
+                      title: 'Galle Quest',
+                      description: 'Explore the historic coastal city of Galle and uncover its mysteries with the Adventurer\'s Guild.',
+                      difficulty: 'medium',
+                      questType: 'main_quest',
+                      totalXP: 500,
+                      tasks: [
+                        Task(
+                          id: 'meet-guildmaster',
+                          title: 'Meet Guildmaster',
+                          description: 'Meet Thorvald, Guildmaster of Galle',
+                          order: 1,
+                          type: 'dialogue',
+                          isLocked: false,
+                          isCompleted: false,
+                          xpReward: 50,
+                          taskData: {
+                            'dialogueData': {
+                              'npcName': 'Thorvald',
+                              'npcAvatar': 'guildmaster_avatar.png',
+                              'dialogueText': 'Hello there! It seems you are new to this area. The adventurers guild warmly welcomes you.',
+                              'emotion': 'neutral',
+                              'options': [
+                                {
+                                  'text': 'Continue listening',
+                                  'type': 'choice',
+                                  'nextDialogueId': 'welcome_02',
+                                  'action': 'continue'
+                                }
+                              ]
+                            }
+                          }
+                        )
+                      ],
+                      isActive: true,
+                      userStatus: 'not_started',
+                      tasksCompleted: 0,
+                      totalTasks: 1,
+                      rewards: {
+                        'xp': 500,
+                        'items': ['Established Membership Badge', 'Mysterious Map Fragment'],
+                        'unlocks': ['Guild Access']
+                      }
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         );
       }

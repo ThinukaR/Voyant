@@ -1,5 +1,10 @@
 const path = require("path");
-require("dotenv").config({ path: path.join(__dirname, ".env") });
+require("dotenv").config({ path: path.resolve(__dirname, ".env") });
+
+console.log('Looking for .env at:', path.resolve(__dirname, ".env"));
+console.log('Environment variables loaded:');
+console.log('MONGO_URI:', process.env.MONGO_URI ? 'SET' : 'NOT SET');
+console.log('PORT:', process.env.PORT ? 'SET' : 'NOT SET');
 
 if (!process.env.MONGO_URI) {
   throw new Error("MONGO_URI missing. Set it in backend/.env file");

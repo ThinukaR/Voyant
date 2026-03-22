@@ -2,15 +2,23 @@ import 'package:flutter/material.dart';
 import '../models/quest_models.dart';
 
 class QuestDialogueWidget extends StatefulWidget {
-  final DialogueNode dialogueNode; //current dialogue ( retrieved from backend)
-  final Function(String, {String? userInput}) onChoiceSelected;
-  final bool isProcessing; //helps with not sending too many requests
+  final String npcName;
+  final String? npcAvatar;
+  final String dialogueText;
+  final String emotion;
+  final List<Map<String, dynamic>> options;
+  final void Function(String choice, {String? nextDialogueId}) onChoiceSelected;
+  final bool isProcessing;
 
   const QuestDialogueWidget({
     super.key,
-    required this.dialogueNode,
+    required this.npcName,
+    this.npcAvatar,
+    required this.dialogueText,
+    this.emotion = 'neutral',
+    required this.options,
     required this.onChoiceSelected,
-    required this.isProcessing,
+    this.isProcessing = false,
   });
 
   @override
@@ -19,117 +27,210 @@ class QuestDialogueWidget extends StatefulWidget {
 
 class _QuestDialogueWidgetState extends State<QuestDialogueWidget>
     with SingleTickerProviderStateMixin {
-
-//controllers for animation 
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-//stores input for referral code ( TODO)    
-  final TextEditingController _referenceController = TextEditingController();
-  bool _showReferenceInput = false;
-    
-    @override
-//to run when the widget is created 
+  @override
   void initState() {
     super.initState();
-    
-    //animation duration 
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800), 
+      duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-
-    //will fade from invisible to visible 
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
     ).animate(CurvedAnimation(
       parent: _animationController,
-      curve: const Interval(0.0, 0.6, curve: Curves.easeInOut), //only runs in the first 60% of the animation 
+      curve: Curves.easeInOut,
     ));
-
-    //slightly below to visible range 
     _slideAnimation = Tween<Offset>(
-      begin: const Offset(0.0, 0.3),
+      begin: const Offset(0, 0.3),
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _animationController,
-      curve: const Interval(0.3, 1.0, curve: Curves.easeOutCubic), //ensures that it starts a bit later than the fade's start 
+      curve: Curves.easeOutCubic,
     ));
-
     _animationController.forward();
   }
 
-//preventing memory leaks 
   @override
   void dispose() {
     _animationController.dispose();
-    _referenceController.dispose();
     super.dispose();
   }
 
-void _handleChoice(DialogueOption option) {
-    if (widget.isProcessing) return; //stops double clicking 
-
-    //check - seeing if the response option needs a text input or not
-    //text input is mostly needed for things like referral codes 
-    //if it is not required then it will refer to parent for choice options 
-    if (option.conditions.requiresReference) {
-      setState(() {
-        _showReferenceInput = true;
-      });
-    } else {
-      widget.onChoiceSelected(option.id);
-    }
-  }
- 
-
-  void _submitReferenceChoice(DialogueOption option) {
-    final referenceCode = _referenceController.text.trim();
-    widget.onChoiceSelected(option.id, userInput: referenceCode); //both id and user input are sent 
-    _referenceController.clear();
-    setState(() {
-      _showReferenceInput = false;
-    });
-  }
-
-  
   @override
   Widget build(BuildContext context) {
-    return Positioned.fill(
-        //build for animation 
-      child: AnimatedBuilder(
-        animation: _animationController,
-        builder: (context, child) {
-          return SlideTransition(
-            position: _slideAnimation,
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: Container(
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF1B0330).withOpacity(0.95),
+            const Color(0xFF4A148C).withOpacity(0.95),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFF4A148C).withOpacity(0.3),
+          width: 2,
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          //NPC header
+          Row(
+            children: [
+              Container(
+                width: 60,
+                height: 60,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    colors: [
-                      Colors.black.withOpacity(0.95),
-                      Colors.black.withOpacity(0.85),
-                      Colors.transparent,
-                    ],
+                  color: const Color(0xFF4A148C).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(
+                    color: const Color(0xFF4A148C),
+                    width: 2,
                   ),
                 ),
-                child: SafeArea(
-                  child: Column(
-                    children: [
-                      //npc potrait and name 
-                      _buildNPCPortrait(), 
-                      //fix: could require spacer later 
-                      
-                      //the dialogue box build 
-                      _buildDialogueBox(),
-                      
-                      const SizedBox(height: 20),
-                    ],
+                child: widget.npcAvatar != null
+                    ? ClipOval(
+                        child: Image.network(
+                          widget.npcAvatar!,
+                          width: 56,
+                          height: 56,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(
+                              Icons.person,
+                              size: 30,
+                              color: Color(0xFF4A148C),
+                            );
+                          },
+                        ),
+                      )
+                    : const Icon(
+                        Icons.person,
+                        size: 30,
+                        color: Color(0xFF4A148C),
+                      ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.npcName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: _getEmotionColor(),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        _getEmotionText(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          //dialogue 
+          AnimatedBuilder(
+            animation: _fadeAnimation,
+            builder: (context, child) {
+              return FadeTransition(
+                opacity: _fadeAnimation,
+                child: SlideTransition(
+                  position: _slideAnimation,
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      widget.dialogueText,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+          
+          const SizedBox(height: 16),
+          
+          //options for dialogue
+          ...widget.options.map((option) => _buildOption(option)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOption(Map<String, dynamic> option) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: AnimatedBuilder(
+        animation: _fadeAnimation,
+        builder: (context, child) {
+          return FadeTransition(
+            opacity: _fadeAnimation,
+            child: SlideTransition(
+              position: _slideAnimation,
+              child: InkWell(
+                onTap: widget.isProcessing ? null : () {
+                  widget.onChoiceSelected(
+                    option['text'] ?? '',
+                    nextDialogueId: option['nextDialogueId'],
+                  );
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: widget.isProcessing
+                        ? Colors.grey.withOpacity(0.3)
+                        : const Color(0xFF4A148C).withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: const Color(0xFF4A148C),
+                    ),
+                  ),
+                  child: Text(
+                    option['text'] ?? 'Option',
+                    style: TextStyle(
+                      color: widget.isProcessing
+                          ? Colors.grey
+                          : Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
@@ -140,208 +241,35 @@ void _handleChoice(DialogueOption option) {
     );
   }
 
-//building npc potrait
-  Widget _buildNPCPortrait() {
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: Row(
-        children: [
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.purple.withOpacity(0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: widget.dialogueNode.npcAvatar.isNotEmpty
-                  ? Image.network(
-                      widget.dialogueNode.npcAvatar, //gets npc's image 
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: const Color(0xFF4A148C),
-                          child: const Icon(
-                            Icons.person,
-                            color: Colors.white,
-                            size: 60,
-                          ),
-                        );
-                      },
-                    )
-
-                  : Container(
-                      color: const Color(0xFF4A148C),
-                      child: const Icon(
-                        Icons.person,
-                        color: Colors.white,
-                        size: 60,
-                      ),
-                    ),
-            ),
-          ),
-
-          const SizedBox(width: 20),
-          
-          
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                //npc name 
-                Text(
-                  widget.dialogueNode.npcName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                //npc role 
-                Text(
-                  'NPCs role',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+  Color _getEmotionColor() {
+    switch (widget.emotion) {
+      case 'happy':
+        return Colors.green.withOpacity(0.3);
+      case 'angry':
+        return Colors.red.withOpacity(0.3);
+      case 'sad':
+        return Colors.blue.withOpacity(0.3);
+      case 'surprised':
+        return Colors.orange.withOpacity(0.3);
+      case 'neutral':
+      default:
+        return const Color(0xFF4A148C).withOpacity(0.3);
+    }
   }
 
-//build for the dialogue box ( called/referenced earlier)
-  Widget _buildDialogueBox() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFF4A148C).withOpacity(0.3),
-          width: 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.purple.withOpacity(0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            widget.dialogueNode.dialogueText, //gets the dialogue text 
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              height: 1.4,
-            ),
-          ),
-          
-          const SizedBox(height: 24),
-          
-          //inputs ( references)
-          if (_showReferenceInput)
-            Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              child: TextField(
-                controller: _referenceController,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: 'Enter the reference code...',
-                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.purple.withOpacity(0.5)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.purple.withOpacity(0.5)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Color(0xFF4A148C)),
-                  ),
-                ),
-              ),
-            ),
-          
-          ...widget.dialogueNode.options.map((option) => _buildOption(option)),
-        ],
-      ),
-    );
-  }
-
-
-  Widget _buildOption(DialogueOption option) {
-    //check - if the option needs a different type of extra input ( like a referral code )
-    final isReferenceOption = option.conditions.requiresReference;
-    final showInput = _showReferenceInput && isReferenceOption;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: ElevatedButton( //clickable button 
-        onPressed: widget.isProcessing ? null : () { //if processing is true then button is disabled preventing spam
-          if (showInput) {
-            _submitReferenceChoice(option);
-          } else {
-            _handleChoice(option);
-          }
-        },
-        //button styling  
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.purple.withOpacity(0.2),
-          foregroundColor: Colors.white,
-          side: BorderSide(
-            color: Colors.purple.withOpacity(0.5),
-            width: 1,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                option.text,
-                style: const TextStyle(
-                  fontSize: 16,
-                ),
-              ),
-            ),
-            if (widget.isProcessing && showInput)
-              const SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
+  String _getEmotionText() {
+    switch (widget.emotion) {
+      case 'happy':
+        return 'Happy';
+      case 'angry':
+        return 'Angry';
+      case 'sad':
+        return 'Sad';
+      case 'surprised':
+        return 'Surprised';
+      case 'neutral':
+      default:
+        return 'Neutral';
+    }
   }
 }
-        
-       

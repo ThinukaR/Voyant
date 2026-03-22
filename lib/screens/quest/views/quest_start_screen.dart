@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 
 class QuestStartScreen extends StatefulWidget {
   final String questTitle;
+  final String? questId;
+  final VoidCallback? onQuestStarted;
 
   const QuestStartScreen({
     super.key,
     this.questTitle = 'Quest Started',
+    this.questId,
+    this.onQuestStarted,
   });
 
   @override
@@ -42,6 +46,19 @@ class _QuestStartScreenState extends State<QuestStartScreen>
       CurvedAnimation(parent: _animationController, curve: Curves.elasticOut),
     );
 
+  
+    _animationController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        //navigates after animation finishes
+        Future.delayed(const Duration(seconds: 1), () {
+          if (mounted) {
+            widget.onQuestStarted?.call();
+            Navigator.of(context).pop();
+          }
+        });
+      }
+    });
+
     _animationController.forward();
   }
 
@@ -73,7 +90,7 @@ class _QuestStartScreenState extends State<QuestStartScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Drag Handle
+            //the drag handle
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: Container(
@@ -86,7 +103,7 @@ class _QuestStartScreenState extends State<QuestStartScreen>
               ),
             ),
             const SizedBox(height: 20),
-            // Animated Icon
+            //the animated icon
             ScaleTransition(
               scale: _scaleAnimation,
               child: FadeTransition(
@@ -154,7 +171,10 @@ class _QuestStartScreenState extends State<QuestStartScreen>
             const SizedBox(height: 40),
             // Close Button
             ElevatedButton.icon(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () {
+                widget.onQuestStarted?.call();
+                Navigator.of(context).pop();
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(

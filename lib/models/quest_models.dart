@@ -1,271 +1,374 @@
-import 'package:freezed_annotation/freezed_annotation.dart';
+class Quest {
+  final String id;
+  final String title;
+  final String description;
+  final String difficulty;
+  final int totalXP;
+  final String questType;
+  final Map<String, dynamic>? mapPosition;
+  final String? tripId;
+  final String? destinationId;
+  final int? mainQuestOrder;
+  final List<String>? prerequisites;
+  final String? estimatedDuration;
+  final int? totalSubQuests;
+  final Map<String, dynamic>? startingLocation;
+  final Map<String, dynamic>? triggerLocation;
+  final int? triggerRadius;
+  final String? npcId;
+  final List<Task> tasks;
+  final bool isActive;
+  final Map<String, dynamic>? rewards;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
-part 'quest_models.freezed.dart';
-part 'quest_models.g.dart';
+  //--frontend fields
+  final String userStatus;
+  final int tasksCompleted;
+  final int totalTasks;
+  final QuestProgress? progress;
 
-@freezed
-class MainQuest with _$MainQuest {
-  const factory MainQuest({
-    required String id,
-    required String title,
-    required String description,
-    required String location,
-    required bool isMainQuest,
-    required int questOrder,
-    required List<String> prerequisites,
-    required String estimatedDuration,
-    required int totalSubQuests,
-    required bool isAvailable,
-    required StartingLocation startingLocation,
-    required QuestRewards rewards,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) = _MainQuest;
+  Quest({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.difficulty,
+    required this.totalXP,
+    required this.questType,
+    required this.tasks,
+    required this.isActive,
+    required this.userStatus,
+    required this.tasksCompleted,
+    required this.totalTasks,
+    this.mapPosition,
+    this.tripId,
+    this.destinationId,
+    this.mainQuestOrder,
+    this.prerequisites,
+    this.estimatedDuration,
+    this.totalSubQuests,
+    this.startingLocation,
+    this.triggerLocation,
+    this.triggerRadius,
+    this.npcId,
+    this.rewards,
+    this.createdAt,
+    this.updatedAt,
+    this.progress,
+  });
 
-  factory MainQuest.fromJson(Map<String, dynamic> json) => _$MainQuestFromJson(json);
+  factory Quest.fromJson(Map<String, dynamic> json) {
+    return Quest(
+      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+      title: json['title'] ?? '',
+      description: json['description'] ?? '',
+      difficulty: json['difficulty'] ?? 'Easy',
+      totalXP: json['totalXP'] ?? 0,
+      questType: json['questType'] ?? 'trip_quest',
+      mapPosition: json['mapPosition'],
+      tripId: json['tripId']?.toString(),
+      destinationId: json['destinationId']?.toString(),
+      mainQuestOrder: json['mainQuestOrder'],
+      prerequisites: json['prerequisites']?.cast<String>(),
+      estimatedDuration: json['estimatedDuration'],
+      totalSubQuests: json['totalSubQuests'],
+      startingLocation: json['startingLocation'],
+      triggerLocation: json['triggerLocation'],
+      triggerRadius: json['triggerRadius'],
+      npcId: json['npcId']?.toString(),
+      tasks: (json['tasks'] as List<dynamic>?)
+          ?.map((task) => Task.fromJson(task))
+          .toList() ?? [],
+      isActive: json['isActive'] ?? true,
+      rewards: json['rewards'],
+      createdAt: json['createdAt'] != null 
+          ? DateTime.parse(json['createdAt']) 
+          : null,
+      updatedAt: json['updatedAt'] != null 
+          ? DateTime.parse(json['updatedAt']) 
+          : null,
+      userStatus: json['userStatus'] ?? 'not_started',
+      tasksCompleted: json['tasksCompleted'] ?? 0,
+      totalTasks: json['totalTasks'] ?? 0,
+      progress: json['progress'] != null 
+          ? QuestProgress.fromJson(json['progress'])
+          : null,
+    );
+  }
+
+  //getters ( helpers)
+  bool get isCompleted => userStatus == 'completed';
+  bool get isInProgress => userStatus == 'in_progress';
+  bool get isNotStarted => userStatus == 'not_started';
+  double get progressPercentage => totalTasks > 0 ? tasksCompleted / totalTasks : 0.0;
+  
+  //type checks 
+  bool get isMainQuest => questType == 'main_quest';
+  bool get isTripQuest => questType == 'trip_quest';
+  bool get isLocationQuest => questType == 'location_quest';
+  bool get isNpcQuest => questType == 'npc_quest';
+
+  //location helpers
+  bool get hasLocation => mapPosition != null || triggerLocation != null;
+  double? get latitude => 
+      mapPosition?['coordinates']?[1] ?? triggerLocation?['coordinates']?['lat'];
+  double? get longitude => 
+      mapPosition?['coordinates']?[0] ?? triggerLocation?['coordinates']?['lng'];
 }
 
-@freezed
-class SubQuest with _$SubQuest {
-  const factory SubQuest({
-    required String id,
-    required String mainQuestId,
-    required String title,
-    required String description,
-    required int questOrder,
-    required QuestLocation location,
-    required NPC npc,
-    required String type,
-    required List<DialogueNode> dialogueNodes,
-    required String startDialogueId,
-    required bool isCompleted,
-    required CompletionConditions completionConditions,
-    required QuestRewards rewards,
-    required QuestPrerequisites prerequisites,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) = _SubQuest;
+class Task {
+  final String id;
+  final String title;
+  final String description;
+  final int order;
+  final String type;
+  final bool isLocked;
+  final bool isCompleted;
+  final int xpReward;
+  final Map<String, dynamic>? taskData;
 
-  factory SubQuest.fromJson(Map<String, dynamic> json) => _$SubQuestFromJson(json);
+  Task({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.order,
+    required this.type,
+    required this.isLocked,
+    required this.isCompleted,
+    required this.xpReward,
+    this.taskData,
+  });
+
+  factory Task.fromJson(Map<String, dynamic> json) {
+    return Task(
+      id: json['_id']?.toString() ?? json['id']?.toString() ?? '',
+      title: json['title'] ?? '',
+      description: json['description'] ?? '',
+      order: json['order'] ?? 1,
+      type: json['type'] ?? 'multiple_choice',
+      isLocked: json['isLocked'] ?? false,
+      isCompleted: json['isCompleted'] ?? false,
+      xpReward: json['xpReward'] ?? 0,
+      taskData: _getTaskData(json),
+    );
+  }
+
+  static Map<String, dynamic>? _getTaskData(Map<String, dynamic> json) {
+    switch (json['type']) {
+      case 'multiple_choice':
+        return json['multipleChoiceData'];
+      case 'dialogue':
+        return json['dialogueData'];
+      case 'geofence':
+        return json['geofenceData'];
+      case 'checkin':
+        return json['checkinData'];
+      case 'number_input':
+        return json['numberInputData'];
+      case 'string_input':
+        return json['stringInputData'];
+      case 'true_false':
+        return json['trueFalseData'];
+      default:
+        return json;
+    }
+  }
+
+  //type helpers
+  bool get isDialogue => type == 'dialogue';
+  bool get isMultipleChoice => type == 'multiple_choice';
+  bool get isGeofence => type == 'geofence';
+  bool get isCheckin => type == 'checkin';
+  bool get isNumberInput => type == 'number_input';
+  bool get isStringInput => type == 'string_input';
+  bool get isTrueFalse => type == 'true_false';
 }
 
-@freezed  
-class DialogueNode with _$DialogueNode {
+class QuestProgress {
+  final String id;
+  final String userId;
+  final String questId;
+  final String questType;
+  final String status;
+  final List<TaskProgress> taskProgress;
+  final int currentSubQuestIndex;
+  final List<SubQuestProgress>? subQuestProgress;
+  final int totalXPEarned;
+  final DateTime? startedAt;
+  final DateTime? completedAt;
+  final DateTime? lastPlayedAt;
 
-  const factory DialogueNode({
-    required String id,
-    required String npcName,
-    required String npcAvatar,
-    required String dialogueText,
-    required String emotion,
-    required List<DialogueOption> options,
-    required bool isAutoAdvance,
-    required int autoAdvanceDelay,
-  }) = _DialogueNode;
+  QuestProgress({
+    required this.id,
+    required this.userId,
+    required this.questId,
+    required this.questType,
+    required this.status,
+    required this.taskProgress,
+    required this.currentSubQuestIndex,
+    this.subQuestProgress,
+    required this.totalXPEarned,
+    this.startedAt,
+    this.completedAt,
+    this.lastPlayedAt,
+  });
 
-  factory DialogueNode.fromJson(Map<String, dynamic> json) => _$DialogueNodeFromJson(json);
+  factory QuestProgress.fromJson(Map<String, dynamic> json) {
+    return QuestProgress(
+      id: json['_id']?.toString() ?? '',
+      userId: json['userId'] ?? '',
+      questId: json['questId']?.toString() ?? '',
+      questType: json['questType'] ?? '',
+      status: json['status'] ?? 'not_started',
+      taskProgress: (json['taskProgress'] as List<dynamic>?)
+          ?.map((tp) => TaskProgress.fromJson(tp))
+          .toList() ?? [],
+      currentSubQuestIndex: json['currentSubQuestIndex'] ?? 0,
+      subQuestProgress: (json['subQuestProgress'] as List<dynamic>?)
+          ?.map((sp) => SubQuestProgress.fromJson(sp))
+          .toList(),
+      totalXPEarned: json['totalXPEarned'] ?? 0,
+      startedAt: json['startedAt'] != null 
+          ? DateTime.parse(json['startedAt']) 
+          : null,
+      completedAt: json['completedAt'] != null 
+          ? DateTime.parse(json['completedAt']) 
+          : null,
+      lastPlayedAt: json['lastPlayedAt'] != null 
+          ? DateTime.parse(json['lastPlayedAt']) 
+          : null,
+    );
+  }
+
+  //getters ( helper ) 
+  bool get isCompleted => status == 'completed';
+  bool get isInProgress => status == 'in_progress';
+  bool get isNotStarted => status == 'not_started';
+  double get progressPercentage {
+    if (taskProgress.isEmpty) return 0.0;
+    final completedTasks = taskProgress.where((tp) => tp.isCompleted).length;
+    return completedTasks / taskProgress.length;
+  }
+
+  //getting completed task count 
+  int get tasksCompleted => taskProgress.where((tp) => tp.isCompleted).length;
 }
 
-@freezed
-class DialogueOption with _$DialogueOption {
+class TaskProgress {
+  final String taskId;
+  final bool isCompleted;
+  final DateTime? completedAt;
+  final int xpAwarded;
 
-  const factory DialogueOption({
-    required String id,
-    required String text,
-    required String type,
-    String? nextDialogueId,
-    required DialogueAction action,
-    required DialogueConditions conditions,
-    required DialogueConsequences consequences,
+  TaskProgress({
+    required this.taskId,
+    required this.isCompleted,
+    this.completedAt,
+    required this.xpAwarded,
+  });
 
-  }) = _DialogueOption;
-
-  factory DialogueOption.fromJson(Map<String, dynamic> json) => _$DialogueOptionFromJson(json);
+  factory TaskProgress.fromJson(Map<String, dynamic> json) {
+    return TaskProgress(
+      taskId: json['taskId']?.toString() ?? '',
+      isCompleted: json['isCompleted'] ?? false,
+      completedAt: json['completedAt'] != null 
+          ? DateTime.parse(json['completedAt']) 
+          : null,
+      xpAwarded: json['xpAwarded'] ?? 0,
+    );
+  }
 }
 
-@freezed
-class MainQuestProgress with _$MainQuestProgress {
-  const factory MainQuestProgress({
-    required String id,
-    required String userId,
-    required String mainQuestId,
-    required QuestStatus status,
-    required int currentSubQuestIndex,
-    required List<UserSubQuestProgress> subQuestProgress,
-    required int totalXPEarned,
-    required List<String> flags,
-    DateTime? startedAt,
-    DateTime? completedAt,
-    required DateTime lastPlayedAt,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) = _UserMainQuestProgress;
+class SubQuestProgress {
+  final String subQuestId;
+  final String status;
+  final String? currentDialogueNodeId;
+  final List<String> completedDialogueNodes;
+  final List<UserChoice> userChoices;
+  final List<String> flags;
+  final int xpEarned;
 
-  factory MainQuestProgress.fromJson(Map<String, dynamic> json) => _$MainQuestProgressFromJson(json);
+  SubQuestProgress({
+    required this.subQuestId,
+    required this.status,
+    this.currentDialogueNodeId,
+    required this.completedDialogueNodes,
+    required this.userChoices,
+    required this.flags,
+    required this.xpEarned,
+  });
+
+  factory SubQuestProgress.fromJson(Map<String, dynamic> json) {
+    return SubQuestProgress(
+      subQuestId: json['subQuestId']?.toString() ?? '',
+      status: json['status'] ?? 'locked',
+      currentDialogueNodeId: json['currentDialogueNodeId'],
+      completedDialogueNodes: json['completedDialogueNodes']?.cast<String>() ?? [],
+      userChoices: (json['userChoices'] as List<dynamic>?)
+          ?.map((choice) => UserChoice.fromJson(choice))
+          .toList() ?? [],
+      flags: json['flags']?.cast<String>() ?? [],
+      xpEarned: json['xpEarned'] ?? 0,
+    );
+  }
 }
 
-@freezed
-class UserSubQuestProgress with _$UserSubQuestProgress {
-  const factory UserSubQuestProgress({
-    required String id,
-    required String subQuestId,
-    required QuestStatus status,
-    String? currentDialogueNodeId,
-    required List<String> completedDialogueNodes,
-    required List<UserChoice> userChoices,
-    required List<String> flags,
-    DateTime? startedAt,
-    DateTime? completedAt,
-    required int xpEarned,
-  }) = _UserSubQuestProgress;
+class UserChoice {
+  final String choiceId;
+  final String choiceText;
+  final Map<String, dynamic>? nextDialogueId;
+  final String? selectedOption;
 
-  factory UserSubQuestProgress.fromJson(Map<String, dynamic> json) => _$UserSubQuestProgressFromJson(json);
+  UserChoice({
+    required this.choiceId,
+    required this.choiceText,
+    this.nextDialogueId,
+    this.selectedOption,
+  });
+
+  factory UserChoice.fromJson(Map<String, dynamic> json) {
+    return UserChoice(
+      choiceId: json['choiceId']?.toString() ?? '',
+      choiceText: json['choiceText'] ?? '',
+      nextDialogueId: json['nextDialogueId'],
+      selectedOption: json['selectedOption'],
+    );
+  }
 }
 
-@freezed
-class UserChoice with _$UserChoice {
-  const factory UserChoice({
-    required String dialogueNodeId,
-    required String optionId,
-    required String choice,
-    required DateTime timestamp,
-  }) = _UserChoice;
+class QuestListResponse {
+  final List<Quest> mainQuests;
+  final List<Quest> tripQuests;
+  final List<Quest> locationQuests;
+  final List<Quest> npcQuests;
+  final List<dynamic> trips;
 
-  factory UserChoice.fromJson(Map<String, dynamic> json) => _$UserChoiceFromJson(json);
-}
+  QuestListResponse({
+    required this.mainQuests,
+    required this.tripQuests,
+    required this.locationQuests,
+    required this.npcQuests,
+    required this.trips,
+  });
 
-@freezed
-class StartingLocation with _$StartingLocation {
-  const factory StartingLocation({
-    required String name,
-    required Coordinates coordinates,
-  }) = _StartingLocation;
-
-  factory StartingLocation.fromJson(Map<String, dynamic> json) => _$StartingLocationFromJson(json);
-}
-
-@freezed
-class QuestLocation with _$QuestLocation {
-  const factory QuestLocation({
-    String? name,
-    Coordinates? coordinates,
-  }) = _QuestLocation;
-
-  factory QuestLocation.fromJson(Map<String, dynamic> json) => _$QuestLocationFromJson(json);
-}
-
-@freezed
-class Coordinates with _$Coordinates {
-  const factory Coordinates({
-    required double lat,
-    required double lng,
-  }) = _Coordinates;
-
-  factory Coordinates.fromJson(Map<String, dynamic> json) => _$CoordinatesFromJson(json);
-}
-
-@freezed
-class NPC with _$NPC {
-  const factory NPC({
-    required String name,
-    required String avatar,
-    String? role,
-  }) = _NPC;
-
-  factory NPC.fromJson(Map<String, dynamic> json) => _$NPCFromJson(json);
-}
-
-
-@freezed
-class QuestRewards with _$QuestRewards {
-  const factory QuestRewards({
-    int? xp,
-    List<String>? items,
-    List<String>? unlocks,
-  }) = _QuestRewards;
-
-  factory QuestRewards.fromJson(Map<String, dynamic> json) => _$QuestRewardsFromJson(json);
-}
-
-@freezed
-class CompletionConditions with _$CompletionConditions {
-  const factory CompletionConditions({
-    required List<String> requiredFlags,
-    required List<String> forbiddenFlags,
-    required List<String> requiredDialogueNodes,
-  }) = _CompletionConditions;
-
-  factory CompletionConditions.fromJson(Map<String, dynamic> json) => _$CompletionConditionsFromJson(json);
-}
-
-@freezed
-class QuestPrerequisites with _$QuestPrerequisites {
-  const factory QuestPrerequisites({
-    required List<String> completedSubQuests,
-    required List<String> requiredFlags,
-  }) = _QuestPrerequisites;
-
-  factory QuestPrerequisites.fromJson(Map<String, dynamic> json) => _$QuestPrerequisitesFromJson(json);
-}
-
-
-@freezed
-class DialogueConditions with _$DialogueConditions {
-  const factory DialogueConditions({
-    required bool requiresReference,
-    String? referenceCode,
-    String? checkField,
-  }) = _DialogueConditions;
-
-  factory DialogueConditions.fromJson(Map<String, dynamic> json) => _$DialogueConditionsFromJson(json);
-}
-
-
-@freezed
-class DialogueConsequences with _$DialogueConsequences {
-  const factory DialogueConsequences({
-    String? addFlag,
-    String? removeFlag,
-    RelationshipChange? modifyRelationship,
-  }) = _DialogueConsequences;
-
-  factory DialogueConsequences.fromJson(Map<String, dynamic> json) => _$DialogueConsequencesFromJson(json);
-}
-
-
-
-@freezed
-class RelationshipChange with _$RelationshipChange {
-  const factory RelationshipChange({
-    required String character,
-    required int change,
-  }) = _RelationshipChange;
-
-  factory RelationshipChange.fromJson(Map<String, dynamic> json) => _$RelationshipChangeFromJson(json);
-}
-
-
-enum QuestStatus {
-  @JsonValue('locked')
-  locked,
-  @JsonValue('available')
-  available,
-  @JsonValue('in_progress')
-  inProgress,
-  @JsonValue('completed')
-  completed,
-}
-
-enum DialogueAction { 
-
-  @JsonValue('continue')
-  continue,
-  @JsonValue('complete_quest')
-  completeQuest,
-  @JsonValue('branch')
-  branch,
-  @JsonValue('require_input')
-  requireInput,
-  @JsonValue('check_reference')
-  checkReference,
+  factory QuestListResponse.fromJson(Map<String, dynamic> json) {
+  
+    final questsData = json['quests'] ?? json;
+    
+    return QuestListResponse(
+      mainQuests: (questsData['main_quests'] as List<dynamic>?)
+          ?.map((quest) => Quest.fromJson(quest))
+          .toList() ?? [],
+      tripQuests: (questsData['trip_quests'] as List<dynamic>?)
+          ?.map((quest) => Quest.fromJson(quest))
+          .toList() ?? [],
+      locationQuests: (questsData['location_quests'] as List<dynamic>?)
+          ?.map((quest) => Quest.fromJson(quest))
+          .toList() ?? [],
+      npcQuests: (questsData['npc_quests'] as List<dynamic>?)
+          ?.map((quest) => Quest.fromJson(quest))
+          .toList() ?? [],
+      trips: json['trips']?.cast<dynamic>() ?? [],
+    );
+  }
 }
