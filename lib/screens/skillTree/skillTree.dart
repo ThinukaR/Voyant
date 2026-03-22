@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:voyant/widgets/animated_gradient_background.dart';
 
 // ============================================================
 // DATA MODEL
@@ -46,7 +47,7 @@ class SkillTreeScreen extends StatefulWidget {
 class _SkillTreeScreenState extends State<SkillTreeScreen>
     with SingleTickerProviderStateMixin {
   // ── API ────────────────────────────────────────────────────
-  static const String baseUrl = 'http://10.0.2.2:3000/api';
+  static const String baseUrl = 'http://192.168.8.148:3000/api';
 
   // ── State ──────────────────────────────────────────────────
   int _skillPoints = 0;
@@ -434,18 +435,22 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
   Widget build(BuildContext context) {
     if (isLoading) {
       return const Scaffold(
-        backgroundColor: Color(0xFF0D0A1E),
-        body: Center(
-          child: CircularProgressIndicator(color: Color(0xFF7C3AED)),
+        backgroundColor: Colors.transparent,
+        body: AnimatedGradientBackground(
+          child: Center(
+            child: CircularProgressIndicator(color: Color(0xFF7C3AED)),
+          ),
         ),
       );
     }
 
     if (error != null) {
       return Scaffold(
-        backgroundColor: const Color(0xFF0D0A1E),
-        body: Center(
-          child: Text(error!, style: const TextStyle(color: Colors.white)),
+        backgroundColor: Colors.transparent,
+        body: AnimatedGradientBackground(
+          child: Center(
+            child: Text(error!, style: const TextStyle(color: Colors.white)),
+          ),
         ),
       );
     }
@@ -465,11 +470,12 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
     final tier3Open = t2u >= _t3need;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0A1E),
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      backgroundColor: Colors.transparent,
+      body: AnimatedGradientBackground(
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // ── Header ──────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 28, 24, 0),
@@ -668,7 +674,8 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
                 ),
               ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );

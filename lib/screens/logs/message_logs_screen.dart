@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:voyant/widgets/animated_gradient_background.dart';
 import '../../../components/info_prompt_popup.dart';
 
 class MessageLogsRepository {
-  static const String _baseUrl = 'http://localhost:3000/api/messages';
+  static const String _baseUrl = 'http://10.0.2.2:3000/api/messages';
   
   static Future<List<Message>> getUserMessages(String userId, {
     int page = 1,
@@ -248,7 +249,7 @@ with TickerProviderStateMixin {
 @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1B0330),
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         backgroundColor: const Color(0xFF4A148C),
         elevation: 0,
@@ -301,14 +302,16 @@ with TickerProviderStateMixin {
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildMessagesList('all'),
-          _buildMessagesList('hint'),
-          _buildMessagesList('quest_update'),
-          _buildMessagesList('reward'),
-        ],
+      body: AnimatedGradientBackground(
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            _buildMessagesList('all'),
+            _buildMessagesList('hint'),
+            _buildMessagesList('quest_update'),
+            _buildMessagesList('reward'),
+          ],
+        ),
       ),
     );
   }

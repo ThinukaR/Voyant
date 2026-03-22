@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'components/settings_tile.dart';
+import 'package:voyant/widgets/animated_gradient_background.dart';
+import '../components/settings_tile.dart';
 import 'account_settings_screen.dart';
 import 'notification_settings_screen.dart';
-import 'appearance_settings_screen.dart';
-import 'privacy_security_settings_screen.dart';
-import 'help_support_settings_screen.dart';
+import '../settings/appearance_settings_screen.dart';
+import '../settings/privacy_security_settings_screen.dart';
+import '../settings/help_support_settings_screen.dart';
 import 'about_settings_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -22,29 +23,35 @@ class SettingsScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFF5B0E8C),
-              Color(0xFF1B0033),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+      backgroundColor: Colors.transparent,
+      body: AnimatedGradientBackground(
         child: SafeArea(
           child: Column(
             children: [
-              const SizedBox(height: 20),
+              const SizedBox(height: 8),
 
-              // Title
-              const Text(
-                "Settings",
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+              // Header with back navigation.
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+                    ),
+                    const Expanded(
+                      child: Text(
+                        "Settings",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 48),
+                  ],
                 ),
               ),
 
@@ -126,27 +133,6 @@ class SettingsScreen extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 20),
-
-              // Bottom Button (Map icon style)
-              Container(
-                height: 70,
-                width: 70,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    colors: [
-                      Color(0xFF6A1B9A),
-                      Color(0xFFAB47BC),
-                    ],
-                  ),
-                ),
-                child: const Icon(
-                  Icons.map_outlined,
-                  color: Colors.white,
-                  size: 30,
-                ),
-              ),
 
               const SizedBox(height: 20),
             ],

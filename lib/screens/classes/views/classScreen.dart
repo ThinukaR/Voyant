@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:voyant/widgets/animated_gradient_background.dart';
 
 import '../blocs/screen_bloc.dart';
 
@@ -98,9 +99,10 @@ class _ClassScreenState extends State<ClassScreen>
             state.currentPageIndex == state.availableClasses.length - 1;
 
         return Scaffold(
-          backgroundColor: const Color(0xFF0D0A1E),
-          body: SafeArea(
-            child: Column(
+          backgroundColor: Colors.transparent,
+          body: AnimatedGradientBackground(
+            child: SafeArea(
+              child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // ── Header ──────────────────────────────────
@@ -297,6 +299,7 @@ class _ClassScreenState extends State<ClassScreen>
 
                 const SizedBox(height: 24),
               ],
+              ),
             ),
           ),
         );

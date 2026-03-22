@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:voyant/widgets/animated_gradient_background.dart';
 
 class ReferScreenView extends StatefulWidget {
   const ReferScreenView({super.key});
@@ -15,17 +16,8 @@ class _ReferScreenViewState extends State<ReferScreenView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFF5B0E8C),
-              Color(0xFF1B0033),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+      backgroundColor: Colors.transparent,
+      body: AnimatedGradientBackground(
         child: SafeArea(
           child: SingleChildScrollView(
             child: Column(

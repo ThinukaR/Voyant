@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:voyant/widgets/animated_gradient_background.dart';
 import '../../../models/quest_models.dart';
 import '../../../services/quest_service.dart';
 import '../../../components/quest_dialogue_widget.dart';
@@ -69,14 +70,16 @@ class _QuestScreenState extends State<QuestScreen> {
           .where((tp) => tp.isCompleted)
           .map((tp) => tp.taskId)
           .toSet();
-      
-      _currentTask = _availableTasks.firstWhere(
-        (task) => !completedTaskIds.contains(task.id),
-        orElse: () => _availableTasks.isNotEmpty ? _availableTasks.first : null as Task,
-      );
-    } else {
-      _currentTask = _availableTasks.isNotEmpty ? _availableTasks.first : null as Task;
+
+      for (final task in _availableTasks) {
+        if (!completedTaskIds.contains(task.id)) {
+          _currentTask = task;
+          return _currentTask;
+        }
+      }
     }
+
+    _currentTask = _availableTasks.isNotEmpty ? _availableTasks.first : null;
     return _currentTask;
   }
 
@@ -121,200 +124,212 @@ class _QuestScreenState extends State<QuestScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF1B0330),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF4A148C),
-        elevation: 0,
-        title: Text(
-          widget.quest.title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Colors.transparent,
+        body: AnimatedGradientBackground(
+          child: Center(
+            child: CircularProgressIndicator(color: Color(0xFFB020DD)),
           ),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
+      );
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        backgroundColor: Colors.transparent,
+        body: AnimatedGradientBackground(
+          child: Center(
+            child: Text(_error!, style: const TextStyle(color: Colors.white)),
+          ),
         ),
-      ),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          return SingleChildScrollView(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: constraints.maxHeight,
-              ),
-              child: IntrinsicHeight(
-                child: _isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4A148C)),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: AnimatedGradientBackground(
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // header
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => Navigator.pop(context),
+                          child: const Icon(
+                            Icons.arrow_back_ios,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                         ),
-                      )
-                    : _error != null
-                        ? Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(24),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.error_outline,
-                                    size: 64,
-                                    color: const Color(0xFF4A148C),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'Error loading quest',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    _error!,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      color: Colors.white54,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 24),
-                                  ElevatedButton(
-                                    onPressed: _loadQuestData,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF4A148C),
-                                      foregroundColor: Colors.white,
-                                    ),
-                                    child: const Text('Retry'),
-                                  ),
-                                ],
-                              ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            widget.quest.title,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 26,
+                              fontWeight: FontWeight.bold,
                             ),
-                          )
-                        : _currentTask == null
-                            ? const Center(
-                                child: Text(
-                                  'No available tasks',
-                                  style: TextStyle(
-                                    color: Color(0xFFB3B3B3),
-                                    fontSize: 18,
-                                  ),
-                                ),
-                              )
-                            : Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    const SizedBox(height: 6),
+                    // status badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.orange.withOpacity(0.5),
+                        ),
+                      ),
+                      child: Text(
+                        widget.quest.userStatus == 'completed'
+                            ? 'Completed'
+                            : 'In Progress',
+                        style: TextStyle(
+                          color: widget.quest.userStatus == 'completed'
+                              ? Colors.green
+                              : Colors.orange,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: _buildQuestBody(),
+              ),
+            ],
+          ),
+      ),
+        ),
+    );
+  }
 
-                                    //quest info 
-                                    Container(
-                                      padding: const EdgeInsets.all(16),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(
-                                          color: const Color(0xFF4A148C).withOpacity(0.3),
-                                          width: 2,
-                                        ),
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            _currentTask!.title,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 20,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            _currentTask!.description ?? '',
-                                            style: TextStyle(
-                                              color: Colors.white.withOpacity(0.8),
-                                              fontSize: 16,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 16),
-                                          Row(
-                                            children: [
-                                              Icon(
-                                                Icons.task_alt,
-                                                color: Colors.white.withOpacity(0.7),
-                                                size: 20,
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Text(
-                                                'Task ${_availableTasks.indexOf(_currentTask!) + 1} of ${_availableTasks.length}',
-                                                style: TextStyle(
-                                                  color: Colors.white.withOpacity(0.7),
-                                                  fontSize: 14,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 16),
-                                              Icon(
-                                                Icons.star,
-                                                color: Colors.white.withOpacity(0.7),
-                                                size: 20,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                '${_currentTask!.xpReward} XP',
-                                                style: TextStyle(
-                                                  color: Colors.white.withOpacity(0.7),
-                                                  fontSize: 14,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 24),
+  Widget _buildQuestBody() {
+    if (_currentTask == null) {
+      return const Center(
+        child: Text(
+          'No available tasks',
+          style: TextStyle(
+            color: Color(0xFFB3B3B3),
+            fontSize: 18,
+          ),
+        ),
+      );
+    }
 
-                                    //task content
-                                    _buildTaskContent(),
-
-                                    const SizedBox(height: 24),
-
-                                    //complete task ( the button for it )
-                                    if (_currentTask!.type != 'dialogue')
-                                      SizedBox(
-                                        width: double.infinity,
-                                        child: ElevatedButton(
-                                          onPressed: _isLoading ? null : () => _completeTask(_currentTask!.id),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: const Color(0xFF4A148C),
-                                            foregroundColor: Colors.white,
-                                            padding: const EdgeInsets.symmetric(vertical: 16),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                          ),
-                                          child: _isLoading
-                                              ? const CircularProgressIndicator(
-                                                  color: Colors.white,
-                                                )
-                                              : const Text(
-                                                  'Complete Task',
-                                                  style: TextStyle(fontSize: 16),
-                                                ),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Quest info card for the active task.
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFF4A148C).withOpacity(0.3),
+                width: 2,
               ),
             ),
-          );
-        },
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _currentTask!.title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _currentTask!.description,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.8),
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.task_alt,
+                      color: Colors.white.withOpacity(0.7),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Task ${_availableTasks.indexOf(_currentTask!) + 1} of ${_availableTasks.length}',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.7),
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Icon(
+                      Icons.star,
+                      color: Colors.white.withOpacity(0.7),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${_currentTask!.xpReward} XP',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.7),
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          _buildTaskContent(),
+          const SizedBox(height: 24),
+          if (_currentTask!.type != 'dialogue')
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : () => _completeTask(_currentTask!.id),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4A148C),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: _isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text(
+                        'Complete Task',
+                        style: TextStyle(fontSize: 16),
+                      ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -663,7 +678,7 @@ class _QuestScreenState extends State<QuestScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            _currentTask!.description ?? '',
+            _currentTask!.description,
             style: TextStyle(
               color: Colors.white.withOpacity(0.7),
               fontSize: 14,

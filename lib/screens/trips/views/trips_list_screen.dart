@@ -14,6 +14,8 @@ class TripsTab extends StatefulWidget {
 }
 
 class _TripsTabState extends State<TripsTab> {
+  static const String baseUrl = 'http://192.168.8.148:3000/api';
+
   List<dynamic> trips = [];
   List<Quest> mainQuests = [];
   bool isLoading = true;

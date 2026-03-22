@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:voyant/widgets/animated_gradient_background.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class HelpSupportSettingsScreen extends StatefulWidget {
@@ -372,17 +373,8 @@ class _HelpSupportSettingsScreenState extends State<HelpSupportSettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFF5B0E8C),
-              Color(0xFF1B0033),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+      backgroundColor: Colors.transparent,
+      body: AnimatedGradientBackground(
         child: SafeArea(
           child: Column(
             children: [

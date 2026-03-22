@@ -35,7 +35,7 @@ class Reward {
 }
 
 class RewardRepository {
-  static const String _baseUrl = 'http://localhost:3000/api'; //will have to re-adjust this for real phones
+  static const String _baseUrl = 'http://10.0.2.2:3000/api'; //will have to re-adjust this for real phones
   
   static Future<void> saveRewardToUser(String userId, String rewardId, int currentXP, int newXP) async {
     try {
