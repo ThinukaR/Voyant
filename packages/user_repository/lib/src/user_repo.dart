@@ -71,4 +71,7 @@ abstract class UserRepository {
 
   Future<void> submitAppRating({required int rating});
 
+  // About Settings
+  Future<Map<String, dynamic>> getAboutData();
+
 }

@@ -8,6 +8,7 @@ import 'package:voyant/blocs/account_settings_bloc/account_settings_bloc.dart';
 import 'package:voyant/blocs/notification_settings_bloc/notification_settings_bloc.dart';
 import 'package:voyant/blocs/privacy_security_settings_bloc/privacy_security_settings_bloc.dart';
 import 'package:voyant/blocs/help_support_settings_bloc/help_support_settings_bloc.dart';
+import 'package:voyant/blocs/about_settings_bloc/about_settings_bloc.dart';
 
 class MyApp extends StatelessWidget {
   final UserRepository userRepository;
@@ -57,6 +58,11 @@ class MyApp extends StatelessWidget {
           ),
           BlocProvider<HelpSupportSettingsBloc>(
             create: (context) => HelpSupportSettingsBloc(
+              userRepository: userRepository,
+            ),
+          ),
+          BlocProvider<AboutSettingsBloc>(
+            create: (context) => AboutSettingsBloc(
               userRepository: userRepository,
             ),
           ),

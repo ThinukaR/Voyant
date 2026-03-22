@@ -663,4 +663,54 @@ class FirebaseUserRepo implements UserRepository {
       rethrow;
     }
   }
+
+  /// Get about data
+  @override
+  Future<Map<String, dynamic>> getAboutData() async {
+    try {
+      return {
+        'appName': 'Voyant',
+        'appVersion': '1.0.0',
+        'buildNumber': '1',
+        'aboutText': 'Voyant is an innovative travel and adventure application designed to connect travelers with unforgettable experiences around the world.',
+        'mission': 'Mission: To empower travelers to explore the world safely and meaningfully.',
+        'vision': 'Vision: To create a global community of adventurers sharing authentic travel experiences.',
+        'releaseNotes': [
+          {
+            'version': '1.0.0',
+            'date': 'March 2026',
+            'changes': '• Initial launch\n• Map integration\n• User authentication\n• Settings panel\n• Profile management'
+          },
+        ],
+        'developers': [
+          {
+            'name': 'Lead Developer',
+            'role': 'Full Stack Development',
+            'email': 'dev@voyant.com'
+          },
+          {
+            'name': 'UI/UX Designer',
+            'role': 'Design & Interface',
+            'email': 'design@voyant.com'
+          },
+          {
+            'name': 'Backend Engineer',
+            'role': 'Server & Database',
+            'email': 'backend@voyant.com'
+          },
+        ],
+        'thirdPartyLibraries': [
+          {'name': 'Flutter', 'description': 'UI framework', 'license': 'BSD'},
+          {'name': 'Firebase', 'description': 'Backend & Authentication', 'license': 'Apache 2.0'},
+          {'name': 'Google Maps', 'description': 'Map integration', 'license': 'Apache 2.0'},
+          {'name': 'BLoC', 'description': 'State management', 'license': 'MIT'},
+          {'name': 'Image Picker', 'description': 'Image selection', 'license': 'BSD'},
+          {'name': 'URL Launcher', 'description': 'URL handling', 'license': 'BSD'},
+        ],
+      };
+    } catch (e) {
+      debugPrint("❌ Get About Data Error: $e");
+      rethrow;
+    }
+  }
 }
