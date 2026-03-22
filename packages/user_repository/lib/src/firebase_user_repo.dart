@@ -527,4 +527,140 @@ class FirebaseUserRepo implements UserRepository {
       rethrow;
     }
   }
+
+  /// Get help and support data
+  @override
+  Future<Map<String, dynamic>> getHelpSupportData() async {
+    try {
+      return {
+        'faqs': [
+          {
+            'question': 'How do I reset my password?',
+            'answer': 'Go to the login screen and tap "Forgot Password". Enter your email and follow the instructions sent to your inbox.'
+          },
+          {
+            'question': 'How do I enable Two-Factor Authentication?',
+            'answer': 'Navigate to Settings > Privacy & Security > Account Security, and toggle on Two-Factor Authentication.'
+          },
+          {
+            'question': 'Can I change my profile picture?',
+            'answer': 'Yes, go to Settings > Account Settings and tap on your profile picture to upload a new one.'
+          },
+          {
+            'question': 'How do I block a user?',
+            'answer': 'Visit Settings > Privacy & Security > Block & Safety to manage blocked users.'
+          },
+          {
+            'question': 'How do I download my data?',
+            'answer': 'Go to Settings > Privacy & Security > Data Protection and tap "Download My Data".'
+          },
+        ],
+        'supportTickets': [],
+        'appVersion': '1.0.0',
+      };
+    } catch (e) {
+      debugPrint("❌ Get Help Support Data Error: $e");
+      rethrow;
+    }
+  }
+
+  /// Submit support ticket
+  @override
+  Future<void> submitSupportTicket({
+    required String subject,
+    required String description,
+  }) async {
+    try {
+      final user = _firebaseAuth.currentUser;
+      if (user == null) throw Exception("User not authenticated");
+
+      await usersCollection
+          .doc(user.uid)
+          .collection('support')
+          .add({
+            'subject': subject,
+            'description': description,
+            'status': 'open',
+            'createdAt': FieldValue.serverTimestamp(),
+            'userEmail': user.email,
+          });
+
+      debugPrint("✅ Support ticket submitted successfully");
+    } catch (e) {
+      debugPrint("❌ Submit Support Ticket Error: $e");
+      rethrow;
+    }
+  }
+
+  /// Submit bug report
+  @override
+  Future<void> submitBugReport({required String description}) async {
+    try {
+      final user = _firebaseAuth.currentUser;
+      if (user == null) throw Exception("User not authenticated");
+
+      await usersCollection
+          .doc(user.uid)
+          .collection('bugReports')
+          .add({
+            'description': description,
+            'status': 'pending',
+            'createdAt': FieldValue.serverTimestamp(),
+            'userEmail': user.email,
+            'appVersion': '1.0.0',
+          });
+
+      debugPrint("✅ Bug report submitted successfully");
+    } catch (e) {
+      debugPrint("❌ Submit Bug Report Error: $e");
+      rethrow;
+    }
+  }
+
+  /// Submit feedback
+  @override
+  Future<void> submitFeedback({required String feedback}) async {
+    try {
+      final user = _firebaseAuth.currentUser;
+      if (user == null) throw Exception("User not authenticated");
+
+      await usersCollection
+          .doc(user.uid)
+          .collection('feedback')
+          .add({
+            'feedback': feedback,
+            'createdAt': FieldValue.serverTimestamp(),
+            'userEmail': user.email,
+          });
+
+      debugPrint("✅ Feedback submitted successfully");
+    } catch (e) {
+      debugPrint("❌ Submit Feedback Error: $e");
+      rethrow;
+    }
+  }
+
+  /// Submit app rating
+  @override
+  Future<void> submitAppRating({required int rating}) async {
+    try {
+      final user = _firebaseAuth.currentUser;
+      if (user == null) throw Exception("User not authenticated");
+
+      await usersCollection
+          .doc(user.uid)
+          .collection('ratings')
+          .add({
+            'rating': rating,
+            'createdAt': FieldValue.serverTimestamp(),
+            'userEmail': user.email,
+            'appVersion': '1.0.0',
+          });
+
+      debugPrint("✅ App rating submitted successfully");
+    } catch (e) {
+      debugPrint("❌ Submit App Rating Error: $e");
+      rethrow;
+    }
+  }
 }

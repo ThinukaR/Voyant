@@ -57,4 +57,18 @@ abstract class UserRepository {
 
   Future<void> logoutFromAllDevices();
 
+  // Help & Support Settings
+  Future<Map<String, dynamic>> getHelpSupportData();
+
+  Future<void> submitSupportTicket({
+    required String subject,
+    required String description,
+  });
+
+  Future<void> submitBugReport({required String description});
+
+  Future<void> submitFeedback({required String feedback});
+
+  Future<void> submitAppRating({required int rating});
+
 }
