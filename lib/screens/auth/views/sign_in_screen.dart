@@ -66,7 +66,7 @@ class _SignInScreenState extends State<SignInScreen> {
               const SizedBox(height: 25),
 
               // Username / Email Field
-              _buildInputLabel("Username"),
+              _buildInputLabel("Email"),
               _buildTextField(
                 controller: emailController,
                 hint: "Enter your email",
@@ -161,7 +161,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     child: const Text(
                       "Register",
                       style: TextStyle(
-                        color: Color(0xFF1B0330), // Darker text for "Register" link
+                        color: Color(0xFF8C50C1), // Darker text for "Register" link
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
                       ),
