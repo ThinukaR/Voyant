@@ -135,6 +135,10 @@ exports.unlockSkill = async (req, res) => {
     const {skillId} = req.body;
     const userId = req.userId; // from auth middleware
 
+    if (!userId) {
+      return res.status(401).json({message: "Authentication required"});
+    }
+
     const skill = await Skill.findById(skillId);
     if (!skill) return res.status(404).json({message: "Skill not found"});
 
@@ -180,6 +184,7 @@ exports.unlockSkill = async (req, res) => {
     if (err.code === 11000) {
       return res.status(400).json({message: "Already unlocked"});
     }
+    console.error("Unlock skill error:", err);
     return res.status(400).json({message: err.message});
   }
 };

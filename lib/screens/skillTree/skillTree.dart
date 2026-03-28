@@ -328,8 +328,13 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
     // call backend to unlock
     try {
       final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+      if (token == null) {
+        _snack('Sign in again to unlock skills', const Color(0xFF2D2550));
+        return;
+      }
+
       final response = await http.post(
-        Uri.parse('$baseUrl/user-skills/${node.id}'),
+        Uri.parse('$baseUrl/user-skills'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -337,8 +342,11 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
         body: jsonEncode({'skillId': node.id}),
       );
 
+      final contentType = response.headers['content-type'] ?? '';
+      final bool isJson = contentType.contains('application/json');
+
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final result = jsonDecode(response.body);
+        final result = isJson ? jsonDecode(response.body) : <String, dynamic>{};
         setState(() {
           node.state = NodeState.unlocked;
           _skillPoints =
@@ -351,11 +359,14 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
           duration: const Duration(seconds: 1),
         );
       } else {
-        final result = jsonDecode(response.body);
-        _snack(
-          result['message'] ?? 'Failed to unlock',
-          const Color(0xFF2D2550),
-        );
+        final String msg;
+        if (isJson) {
+          final result = jsonDecode(response.body);
+          msg = result['message']?.toString() ?? 'Failed to unlock (code ${response.statusCode})';
+        } else {
+          msg = 'Failed to unlock (code ${response.statusCode})';
+        }
+        _snack(msg, const Color(0xFF2D2550));
       }
     } catch (e) {
       _snack('Connection error', const Color(0xFF2D2550));

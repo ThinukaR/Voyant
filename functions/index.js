@@ -38,4 +38,10 @@ app.use(async (req, res, next) => {
   }
 });
 
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error("Unhandled error:", err);
+  res.status(500).json({error: err.message || "Internal server error"});
+});
+
 exports.api = functions.https.onRequest(app);
