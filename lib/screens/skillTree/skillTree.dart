@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:voyant/widgets/animated_gradient_background.dart';
 
 // ============================================================
 // DATA MODEL
@@ -46,7 +47,7 @@ class SkillTreeScreen extends StatefulWidget {
 class _SkillTreeScreenState extends State<SkillTreeScreen>
     with SingleTickerProviderStateMixin {
   // ── API ────────────────────────────────────────────────────
-  static const String baseUrl = 'http://10.0.2.2:3000/api';
+  static const String baseUrl = 'https://api-cbmysz2x4a-uc.a.run.app/api';
 
   // ── State ──────────────────────────────────────────────────
   int _skillPoints = 0;
@@ -164,6 +165,31 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
     });
   }
 
+  // temporary: increment skill points for testing
+  Future<void> _incrementSkillPoints({int amount = 1}) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    
+    setState(() {
+      _skillPoints += amount;
+    });
+    
+    // update Firestore
+    try {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({'skillPoints': _skillPoints});
+      _snack(
+        'Added $amount SP (now: $_skillPoints)',
+        const Color(0xFF7C3AED),
+        duration: const Duration(seconds: 1),
+      );
+    } catch (e) {
+      debugPrint('Error updating skill points: $e');
+    }
+  }
+
   Future<void> _loadSkills() async {
     try {
       // get Firebase token for auth
@@ -191,15 +217,19 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
 
         final loadedNodes = data.map((skill) {
           final isUnlocked = unlockedIds.contains(skill['_id'].toString());
+          final tier = skill['tier'] ?? 1;
+          final initialState = isUnlocked
+              ? NodeState.unlocked
+              : (tier == 1 ? NodeState.available : NodeState.locked);
           return SkillNode(
             id: skill['_id'].toString(),
             label: skill['label'] ?? skill['name'] ?? '',
             description: skill['description'] ?? '',
             icon: _stringToIcon(skill['icon'] ?? 'stars_rounded'),
-            tier: skill['tier'] ?? 1,
+            tier: tier,
             branch: skill['branch'] ?? 'seeker',
             skillPoint: skill['skillPoint'] ?? 2,
-            state: isUnlocked ? NodeState.unlocked : NodeState.locked,
+            state: initialState,
           );
         }).toList();
 
@@ -243,7 +273,9 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
   void _recalc() {
     for (final n in _nodes) {
       if (n.state == NodeState.unlocked) continue;
-      if (n.tier == 2) {
+      if (n.tier == 1) {
+        n.state = NodeState.available;
+      } else if (n.tier == 2) {
         n.state = _countUnlocked(n.branch, 1) >= _t2need
             ? NodeState.available
             : NodeState.locked;
@@ -268,61 +300,9 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
     _slideCtrl.forward();
   }
 
-  void _onNodeTap(SkillNode node) async {
-    if (node.state == NodeState.unlocked) {
-      _showInfo(node);
-      return;
-    }
-    if (node.state == NodeState.locked) {
-      final req = node.tier == 2
-          ? 'Unlock $_t2need Tier 1 skills first'
-          : 'Unlock $_t3need Tier 2 skills first';
-      _snack(req, const Color(0xFF160D2E));
-      return;
-    }
-    if (_skillPoints < node.skillPoint) {
-      _snack(
-        'Need ${node.skillPoint} SP. You have $_skillPoints SP.',
-        const Color(0xFF2D2550),
-      );
-      return;
-    }
-
-    // call backend to unlock
-    try {
-      final token = await FirebaseAuth.instance.currentUser?.getIdToken();
-      final response = await http.post(
-        Uri.parse('$baseUrl/user-skills/${node.id}'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({'skillId': node.id}),
-      );
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final result = jsonDecode(response.body);
-        setState(() {
-          node.state = NodeState.unlocked;
-          _skillPoints =
-              result['remainingSP'] ?? _skillPoints - node.skillPoint;
-          _recalc();
-        });
-        _snack(
-          '${node.label} unlocked!',
-          _color[node.branch]!,
-          duration: const Duration(seconds: 1),
-        );
-      } else {
-        final result = jsonDecode(response.body);
-        _snack(
-          result['message'] ?? 'Failed to unlock',
-          const Color(0xFF2D2550),
-        );
-      }
-    } catch (e) {
-      _snack('Connection error', const Color(0xFF2D2550));
-    }
+  void _onNodeTap(SkillNode node) {
+    // Always show the info dialog — unlock action lives inside it
+    _showInfo(node);
   }
 
   void _snack(
@@ -342,86 +322,239 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
   }
 
   void _showInfo(SkillNode node) {
-    final c = _color[node.branch]!;
+    final c          = _color[node.branch]!;
+    final isUnlocked = node.state == NodeState.unlocked;
+    final isLocked   = node.state == NodeState.locked;
+    final canUnlock  = node.state == NodeState.available && _skillPoints >= node.skillPoint;
+
+    final lockReason = node.tier == 2
+        ? 'Unlock $_t2need Tier 1 skills to access'
+        : 'Unlock $_t3need Tier 2 skills to access';
+
     showDialog(
       context: context,
       barrierColor: Colors.black.withValues(alpha: 0.6),
-      builder: (_) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 48),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: const Color(0xFF120A2E),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: c.withValues(alpha: 0.4), width: 1.5),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 52,
-                height: 52,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(14),
-                  color: c.withValues(alpha: 0.15),
-                  border: Border.all(
-                    color: c.withValues(alpha: 0.4),
-                    width: 1.5,
-                  ),
-                ),
-                child: Icon(node.icon, color: c, size: 24),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                node.label,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Tier ${node.tier}',
-                style: TextStyle(
-                  color: c,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                node.description,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Color(0xFFB0A8D8),
-                  fontSize: 13,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 16),
-              GestureDetector(
-                onTap: () => Navigator.of(context).pop(),
-                child: Container(
-                  width: double.infinity,
-                  height: 42,
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setDialogState) => Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 40),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: const Color(0xFF120A2E),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: c.withValues(alpha: 0.4), width: 1.5),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Icon
+                Container(
+                  width: 60,
+                  height: 60,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF2D2550),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  alignment: Alignment.center,
-                  child: const Text(
-                    'Close',
-                    style: TextStyle(
-                      color: Color(0xFFB0A8D8),
-                      fontWeight: FontWeight.w600,
+                    borderRadius: BorderRadius.circular(16),
+                    color: isLocked
+                        ? const Color(0xFF160D2E)
+                        : c.withValues(alpha: 0.15),
+                    border: Border.all(
+                      color: isLocked
+                          ? const Color(0xFF2D2550)
+                          : c.withValues(alpha: 0.4),
+                      width: 1.5,
                     ),
                   ),
+                  child: Icon(
+                    isLocked ? Icons.lock_rounded : node.icon,
+                    color: isLocked ? const Color(0xFF2D2550) : c,
+                    size: 26,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 14),
+                // Name
+                Text(node.label,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                // Tier + branch badge
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: c.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: c.withValues(alpha: 0.25)),
+                      ),
+                      child: Text(
+                        'Tier ${node.tier}  ·  ${node.branch[0].toUpperCase()}${node.branch.substring(1)}',
+                        style: TextStyle(
+                            color: c,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.4),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                // Description
+                Text(node.description,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        color: Color(0xFFB0A8D8), fontSize: 13, height: 1.6)),
+                const SizedBox(height: 8),
+                // Lock reason (only when locked)
+                if (isLocked) ...[                  const SizedBox(height: 4),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF160D2E),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF2D2550)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.lock_outline_rounded,
+                            color: Color(0xFFB0A8D8), size: 13),
+                        const SizedBox(width: 6),
+                        Text(lockReason,
+                            style: const TextStyle(
+                                color: Color(0xFFB0A8D8), fontSize: 11)),
+                      ],
+                    ),
+                  ),
+                ],
+                // Already unlocked badge
+                if (isUnlocked) ...[                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.check_circle_rounded, color: c, size: 14),
+                      const SizedBox(width: 5),
+                      Text('Already unlocked',
+                          style: TextStyle(
+                              color: c, fontSize: 12, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 20),
+                // Bottom buttons
+                Row(
+                  children: [
+                    // Close button
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: Container(
+                          height: 46,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2D2550),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          alignment: Alignment.center,
+                          child: const Text('Close',
+                              style: TextStyle(
+                                  color: Color(0xFFB0A8D8),
+                                  fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                    ),
+                    // Unlock button (only when available)
+                    if (!isUnlocked && !isLocked) ...[                      const SizedBox(width: 10),
+                      Expanded(
+                        flex: 2,
+                        child: GestureDetector(
+                          onTap: canUnlock
+                              ? () async {
+                                  try {
+                                    final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+                                    final response = await http.post(
+                                      Uri.parse('$baseUrl/user-skills/${node.id}'),
+                                      headers: {
+                                        'Authorization': 'Bearer $token',
+                                        'Content-Type': 'application/json',
+                                      },
+                                      body: jsonEncode({'skillId': node.id}),
+                                    );
+
+                                    if (response.statusCode == 200 || response.statusCode == 201) {
+                                      final result = jsonDecode(response.body);
+                                      Navigator.of(context).pop();
+                                      setState(() {
+                                        node.state = NodeState.unlocked;
+                                        _skillPoints =
+                                            result['remainingSP'] ?? _skillPoints - node.skillPoint;
+                                        _recalc();
+                                      });
+                                      _snack('${node.label} unlocked!',
+                                          _color[node.branch]!,
+                                          duration: const Duration(seconds: 1));
+                                    } else {
+                                      final result = jsonDecode(response.body);
+                                      _snack(
+                                        result['message'] ?? 'Failed to unlock',
+                                        const Color(0xFF2D2550),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    _snack('Connection error', const Color(0xFF2D2550));
+                                  }
+                                }
+                              : null,
+                          child: Container(
+                            height: 46,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              color: canUnlock
+                                  ? c
+                                  : const Color(0xFF160D2E),
+                              border: Border.all(
+                                color: canUnlock
+                                    ? c
+                                    : const Color(0xFF2D2550),
+                              ),
+                              boxShadow: canUnlock
+                                  ? [BoxShadow(
+                                      color: c.withValues(alpha: 0.35),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 3))]
+                                  : [],
+                            ),
+                            alignment: Alignment.center,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.stars_rounded,
+                                    color: canUnlock
+                                        ? Colors.white
+                                        : const Color(0xFF2D2550),
+                                    size: 15),
+                                const SizedBox(width: 6),
+                                Text(
+                                  canUnlock ? 'Unlock (${node.skillPoint} SP)' : 'No SP left',
+                                  style: TextStyle(
+                                    color: canUnlock
+                                        ? Colors.white
+                                        : const Color(0xFF2D2550),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -434,18 +567,22 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
   Widget build(BuildContext context) {
     if (isLoading) {
       return const Scaffold(
-        backgroundColor: Color(0xFF0D0A1E),
-        body: Center(
-          child: CircularProgressIndicator(color: Color(0xFF7C3AED)),
+        backgroundColor: Colors.transparent,
+        body: AnimatedGradientBackground(
+          child: Center(
+            child: CircularProgressIndicator(color: Color(0xFF7C3AED)),
+          ),
         ),
       );
     }
 
     if (error != null) {
       return Scaffold(
-        backgroundColor: const Color(0xFF0D0A1E),
-        body: Center(
-          child: Text(error!, style: const TextStyle(color: Colors.white)),
+        backgroundColor: Colors.transparent,
+        body: AnimatedGradientBackground(
+          child: Center(
+            child: Text(error!, style: const TextStyle(color: Colors.white)),
+          ),
         ),
       );
     }
@@ -465,11 +602,12 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
     final tier3Open = t2u >= _t3need;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0A1E),
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      backgroundColor: Colors.transparent,
+      body: AnimatedGradientBackground(
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // ── Header ──────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 28, 24, 0),
@@ -498,38 +636,65 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
                       ),
                     ],
                   ),
-                  // SP badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF160D2E),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: const Color(0xFF7C3AED).withValues(alpha: 0.4),
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.stars_rounded,
-                          color: Color(0xFF7C3AED),
-                          size: 15,
+                  // SP badge with increment button
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
                         ),
-                        const SizedBox(width: 5),
-                        Text(
-                          '$_skillPoints SP',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF160D2E),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: const Color(0xFF7C3AED).withValues(alpha: 0.4),
+                            width: 1,
                           ),
                         ),
-                      ],
-                    ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.stars_rounded,
+                              color: Color(0xFF7C3AED),
+                              size: 15,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              '$_skillPoints SP',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // temporary: increment button
+                      GestureDetector(
+                        onTap: () => _incrementSkillPoints(amount: 5),
+                        onLongPress: () => _incrementSkillPoints(amount: 10),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFF160D2E),
+                            border: Border.all(
+                              color: const Color(0xFF7C3AED).withValues(alpha: 0.4),
+                              width: 1,
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.add_rounded,
+                            color: Color(0xFF7C3AED),
+                            size: 18,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -668,7 +833,8 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
                 ),
               ),
             ),
-          ],
+            ],
+          ),
         ),
       ),
     );
