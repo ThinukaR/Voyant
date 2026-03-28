@@ -1,4 +1,5 @@
 import 'package:user_repository/src/models/models.dart';
+import 'dart:io';
 
 abstract class UserRepository {
 
@@ -11,5 +12,66 @@ abstract class UserRepository {
   Future<void> signIn(String email, String password);
 
   Future<void> logOut();
+
+  // Profile Management
+  Future<void> updateProfile({
+    String? displayName,
+    String? bio,
+    String? location,
+  });
+
+  Future<String> uploadProfileImage(File imageFile);
+
+  // Password Management
+  Future<void> reauthenticateUser(String email, String password);
+
+  Future<void> changePassword(String newPassword);
+
+  // Preferences
+  Future<void> updateLocationSharing(bool enabled);
+
+  Future<void> updateTwoFA(bool enabled);
+
+  Future<void> updateBiometric(bool enabled);
+
+  // Account Management
+  Future<List<Map<String, dynamic>>> getLoginSessions();
+
+  Future<String> downloadPersonalData();
+
+  Future<void> linkSocialAccount(String provider, String accessToken);
+
+  Future<void> unlinkSocialAccount(String provider);
+
+  Future<void> deleteAccountWithCleanup();
+
+  // Notification Settings
+  Future<Map<String, dynamic>> getNotificationSettings();
+
+  Future<void> saveNotificationSettings(Map<String, dynamic> settings);
+
+  // Privacy & Security Settings
+  Future<Map<String, dynamic>> getPrivacySecuritySettings();
+
+  Future<void> savePrivacySecuritySettings(Map<String, dynamic> settings);
+
+  Future<void> logoutFromAllDevices();
+
+  // Help & Support Settings
+  Future<Map<String, dynamic>> getHelpSupportData();
+
+  Future<void> submitSupportTicket({
+    required String subject,
+    required String description,
+  });
+
+  Future<void> submitBugReport({required String description});
+
+  Future<void> submitFeedback({required String feedback});
+
+  Future<void> submitAppRating({required int rating});
+
+  // About Settings
+  Future<Map<String, dynamic>> getAboutData();
 
 }

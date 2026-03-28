@@ -300,9 +300,66 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
     _slideCtrl.forward();
   }
 
-  void _onNodeTap(SkillNode node) {
-    // Always show the info dialog — unlock action lives inside it
-    _showInfo(node);
+  void _onNodeTap(SkillNode node) async {
+    if (node.state == NodeState.unlocked) {
+      _showInfo(node);
+      return;
+    }
+    if (node.state == NodeState.locked) {
+      late final String req;
+      if (node.tier == 2) {
+        req = 'Unlock $_t2need Tier 1 skills first';
+      } else if (node.tier == 3) {
+        req = 'Unlock $_t3need Tier 2 skills first';
+      } else {
+        req = 'This skill is locked';
+      }
+      _snack(req, const Color(0xFF160D2E));
+      return;
+    }
+    if (_skillPoints < node.skillPoint) {
+      _snack(
+        'Need ${node.skillPoint} SP. You have $_skillPoints SP.',
+        const Color(0xFF2D2550),
+      );
+      return;
+    }
+
+    // call backend to unlock
+    try {
+      final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+      final response = await http.post(
+        Uri.parse('$baseUrl/user-skills/${node.id}'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'skillId': node.id}),
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final result = jsonDecode(response.body);
+        setState(() {
+          node.state = NodeState.unlocked;
+          _skillPoints =
+              result['remainingSP'] ?? _skillPoints - node.skillPoint;
+          _recalc();
+        });
+        _snack(
+          '${node.label} unlocked!',
+          _color[node.branch]!,
+          duration: const Duration(seconds: 1),
+        );
+      } else {
+        final result = jsonDecode(response.body);
+        _snack(
+          result['message'] ?? 'Failed to unlock',
+          const Color(0xFF2D2550),
+        );
+      }
+    } catch (e) {
+      _snack('Connection error', const Color(0xFF2D2550));
+    }
   }
 
   void _snack(

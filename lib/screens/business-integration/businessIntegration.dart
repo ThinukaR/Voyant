@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:voyant/widgets/animated_gradient_background.dart';
 
 class BusinessScreen extends StatefulWidget {
   const BusinessScreen({super.key});
@@ -151,10 +152,12 @@ class _BusinessScreenState extends State<BusinessScreen> {
   @override
 Widget build(BuildContext context) {
   return Scaffold(
+    backgroundColor: Colors.transparent,
     appBar: AppBar(
       title: const Text('Business Integration'),
     ),
-    body: _isLoading
+    body: AnimatedGradientBackground(
+      child: _isLoading
         ? const Center(child: CircularProgressIndicator())
         : SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -416,7 +419,8 @@ Widget build(BuildContext context) {
                 ],
               ],
             ),
-          ),
+            ),
+    ),
   );
 }
 
@@ -424,9 +428,9 @@ Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [

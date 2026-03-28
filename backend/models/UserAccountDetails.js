@@ -42,6 +42,65 @@ const userSchema = new mongoose.Schema({
   pfp: {
     type: String
   },
+   // New profile fields
+    displayName: {
+      type: String,
+      trim: true
+    },
+    bio: {
+      type: String,
+      trim: true
+    },
+    location: {
+      type: String,
+      trim: true
+    },
+    profileImageUrl: {
+      type: String
+    },
+    // Preferences
+    locationSharingEnabled: {
+      type: Boolean,
+      default: false
+    },
+    // Security settings
+    twoFactorEnabled: {
+      type: Boolean,
+      default: false
+    },
+    biometricLoginEnabled: {
+      type: Boolean,
+      default: false
+    },
+    // Social accounts
+    connectedAccounts: {
+      google: {
+        linkedAt: Date,
+        email: String
+      },
+      facebook: {
+        linkedAt: Date,
+        email: String
+      },
+      type: Object,
+      default: {}
+    },
+    // Activity tracking
+    lastLoginAt: {
+      type: Date
+    },
+    dataDownloadedAt: {
+      type: Date
+    },
+    loginSessions: [{
+      device: String,
+      ip: String,
+      lastActivity: Date,
+      createdAt: {
+        type: Date,
+        default: Date.now
+      }
+    }],
   last_login: {
     type: Date,
     default: Date.now

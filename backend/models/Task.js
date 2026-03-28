@@ -17,6 +17,8 @@ const taskSchema = new mongoose.Schema({
       "spot_diff",
       "find_object",
       "checkin",
+      "multiple_choice",
+      "true_false",
     ],
     required: true,
   },
@@ -45,6 +47,15 @@ const taskSchema = new mongoose.Schema({
     hint: String,
     objectName: String,
     imageUrl: String,
+  },
+  multipleChoiceData: {
+    question: String,
+    options: [String],
+    correctAnswer: String,
+  },
+  trueFalseData: {
+    statement: String,
+    correctAnswer: Boolean,
   },
 });
 

@@ -3,7 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:voyant/screens/referral_system/refer_screen.dart';
+import 'package:voyant/screens/settings/settings_screen.dart';
 import 'package:voyant/widgets/animated_gradient_background.dart';
+import 'package:voyant/screens/profile/views/profile_screen.dart';
+
+
 
 class HomeTab extends StatefulWidget {
   final VoidCallback onTripsTap;
@@ -14,7 +19,7 @@ class HomeTab extends StatefulWidget {
 }
 
 class _HomeTabState extends State<HomeTab> {
-  static const String baseUrl = 'http://10.0.2.2:3000/api';
+  static const String baseUrl = 'https://api-cbmysz2x4a-uc.a.run.app/api';
 
   Map<String, dynamic>? stats;
   bool isLoading = true;
@@ -36,7 +41,6 @@ class _HomeTabState extends State<HomeTab> {
         Uri.parse('$baseUrl/stats/home'),
         headers: {'Authorization': 'Bearer $token'},
       );
-
       if (response.statusCode == 200) {
         setState(() {
           stats = jsonDecode(response.body);
@@ -51,10 +55,24 @@ class _HomeTabState extends State<HomeTab> {
     }
   }
 
-  // calculate level from XP — every 1000 XP = 1 level
-  int _getLevel(int xp) => (xp / 1000).floor() + 1;
+  // level starts at 0, every 1000 XP = 1 level
+  int _getLevel(int xp) => (xp / 1000).floor();
   int _getXPForNextLevel(int xp) => 1000 - (xp % 1000);
   double _getLevelProgress(int xp) => (xp % 1000) / 1000;
+
+  String _displayFirstName(Map<String, dynamic>? userData) {
+    final firstName = (userData?['firstName'] as String?)?.trim();
+    if (firstName != null && firstName.isNotEmpty) {
+      return firstName;
+    }
+
+    final username = (userData?['username'] as String?)?.trim();
+    if (username == null || username.isEmpty) {
+      return 'Explorer';
+    }
+
+    return username.split(RegExp(r'\s+')).first;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +82,7 @@ class _HomeTabState extends State<HomeTab> {
       body: AnimatedGradientBackground(
         child: SafeArea(
           // StreamBuilder listens to Firestore in realtime
-          // whenever XP updates, the UI updates automatically
+          // whenever XP or level updates, the UI updates automatically
           child: StreamBuilder<DocumentSnapshot>(
             stream: FirebaseFirestore.instance
                 .collection('users')
@@ -72,8 +90,8 @@ class _HomeTabState extends State<HomeTab> {
                 .snapshots(),
             builder: (context, snapshot) {
               final userData = snapshot.data?.data() as Map<String, dynamic>?;
-              final username = userData?['username'] ?? 'Explorer';
-              final totalXP = userData?['totalXP'] ?? 0;
+              final username = _displayFirstName(userData);
+              final totalXP = (userData?['totalXP'] ?? 0) as int;
               final level = _getLevel(totalXP);
               final xpToNext = _getXPForNextLevel(totalXP);
               final levelProgress = _getLevelProgress(totalXP);
@@ -93,7 +111,9 @@ class _HomeTabState extends State<HomeTab> {
                             Text(
                               'Welcome back,',
                               style: TextStyle(
-                                  color: Colors.grey.shade400, fontSize: 14),
+                                color: Colors.grey.shade400,
+                                fontSize: 14,
+                              ),
                             ),
                             Text(
                               username,
@@ -105,26 +125,66 @@ class _HomeTabState extends State<HomeTab> {
                             ),
                           ],
                         ),
-                        Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFFB020DD), Color(0xFF551161)],
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.card_giftcard, color: Color(0xFFB020DD)),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ReferScreenView(),
+                                  ),
+                                );
+                              },
                             ),
-                            border: Border.all(
-                                color: const Color(0xFFB020DD), width: 2),
+                            IconButton(
+                              icon: const Icon(Icons.settings, color: Color(0xFFB020DD)),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => SettingsScreen(),
+                                  ),
+                                );
+                              },
+                            ),
+                            // profile icon — tap to go to profile page
+                        GestureDetector(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ProfileScreen(),
+                            ),
                           ),
-                          child: const Icon(Icons.person,
-                              color: Colors.white, size: 30),
+                          child: Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: const LinearGradient(
+                                    colors: [Color(0xFFB020DD), Color(0xFF551161)],
+                                  ),
+                                  border: Border.all(
+                                    color: const Color(0xFFB020DD),
+                                width: 2,
+                              ),
+                                ),
+                                child: const Icon(
+                              Icons.person,
+                                  color: Colors.white,
+                              size: 30,
+                            ),
+                          ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
 
                     const SizedBox(height: 24),
 
-                    // XP CARD
+                    // XP + LEVEL CARD — connected to Firestore realtime
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
@@ -143,12 +203,18 @@ class _HomeTabState extends State<HomeTab> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('Explorer Level',
-                                  style: TextStyle(
-                                      color: Colors.white70, fontSize: 14)),
+                              const Text(
+                                'Explorer Level',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 14,
+                                ),
+                              ),
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 4),
+                                  horizontal: 12,
+                                  vertical: 4,
+                                ),
                                 decoration: BoxDecoration(
                                   color: const Color(0xFFB020DD),
                                   borderRadius: BorderRadius.circular(20),
@@ -181,14 +247,17 @@ class _HomeTabState extends State<HomeTab> {
                               minHeight: 8,
                               backgroundColor: Colors.white12,
                               valueColor: const AlwaysStoppedAnimation<Color>(
-                                  Color(0xFFB020DD)),
+                                Color(0xFFB020DD),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             '$xpToNext XP to Level ${level + 1}',
                             style: const TextStyle(
-                                color: Colors.white54, fontSize: 12),
+                              color: Colors.white54,
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
@@ -196,11 +265,13 @@ class _HomeTabState extends State<HomeTab> {
 
                     const SizedBox(height: 24),
 
-                    // STATS ROW
+                    // STATS ROW — from backend
                     isLoading
                         ? const Center(
                             child: CircularProgressIndicator(
-                                color: Color(0xFFB020DD)))
+                              color: Color(0xFFB020DD),
+                            ),
+                          )
                         : Row(
                             children: [
                               _buildStatCard(
@@ -231,7 +302,7 @@ class _HomeTabState extends State<HomeTab> {
 
                     const SizedBox(height: 24),
 
-                    // ACTIVE TRIP
+                    // ACTIVE TRIP — from backend
                     const Text(
                       'Active Trip',
                       style: TextStyle(
@@ -244,75 +315,81 @@ class _HomeTabState extends State<HomeTab> {
                     isLoading
                         ? const SizedBox()
                         : stats?['activeTrip'] == null
-                            ? const Text('No active trip',
-                                style: TextStyle(color: Colors.white54))
-                            : Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF12121A),
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                      color: const Color(0xFFB020DD)),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                        ? const Text(
+                            'No active trip',
+                            style: TextStyle(color: Colors.white54),
+                          )
+                        : Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF12121A),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(0xFFB020DD),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          stats!['activeTrip']['name'],
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: Colors.green,
-                                            borderRadius:
-                                                BorderRadius.circular(8),
-                                          ),
-                                          child: const Text('Active',
-                                              style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 12)),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 12),
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(10),
-                                      child: LinearProgressIndicator(
-                                        value: stats!['activeTrip']
-                                                    ['totalQuests'] ==
-                                                0
-                                            ? 0
-                                            : stats!['activeTrip']
-                                                    ['completedQuests'] /
-                                                stats!['activeTrip']
-                                                    ['totalQuests'],
-                                        minHeight: 6,
-                                        backgroundColor: Colors.white12,
-                                        valueColor:
-                                            const AlwaysStoppedAnimation<Color>(Colors.green),
+                                    Text(
+                                      stats!['activeTrip']['name'],
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      '${stats!['activeTrip']['completedQuests']}/${stats!['activeTrip']['totalQuests']} quests completed',
-                                      style: TextStyle(
-                                          color: Colors.grey.shade500,
-                                          fontSize: 12),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.green,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Text(
+                                        'Active',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                        ),
+                                      ),
                                     ),
                                   ],
                                 ),
-                              ),
+                                const SizedBox(height: 12),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: LinearProgressIndicator(
+                                    value:
+                                        stats!['activeTrip']['totalQuests'] == 0
+                                        ? 0
+                                        : stats!['activeTrip']['completedQuests'] /
+                                              stats!['activeTrip']['totalQuests'],
+                                    minHeight: 6,
+                                    backgroundColor: Colors.white12,
+                                    valueColor:
+                                        const AlwaysStoppedAnimation<Color>(
+                                          Colors.green,
+                                        ),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  '${stats!['activeTrip']['completedQuests']}/${stats!['activeTrip']['totalQuests']} quests completed',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade500,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                   ],
                 ),
               );
@@ -323,8 +400,13 @@ class _HomeTabState extends State<HomeTab> {
     );
   }
 
-  Widget _buildStatCard(IconData icon, Color color, String value, String label,
-      VoidCallback? onTap) {
+  Widget _buildStatCard(
+    IconData icon,
+    Color color,
+    String value,
+    String label,
+    VoidCallback? onTap,
+  ) {
     Widget card = Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -349,7 +431,9 @@ class _HomeTabState extends State<HomeTab> {
     );
 
     if (onTap != null) {
-      return Expanded(child: GestureDetector(onTap: onTap, child: card));
+      return Expanded(
+        child: GestureDetector(onTap: onTap, child: card),
+      );
     }
     return Expanded(child: card);
   }

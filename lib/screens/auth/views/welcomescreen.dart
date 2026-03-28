@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:voyant/blocs/authentication_bloc/authentication_bloc.dart';
 import 'package:voyant/screens/auth/blocs/sign_in_bloc/sign_in_bloc.dart';
 import 'package:voyant/screens/auth/blocs/sign_up_bloc/sign_up_bloc.dart';
+import 'package:voyant/widgets/animated_gradient_background.dart';
 import 'sign_in_screen.dart';
 import 'sign_up_screen.dart';
 
@@ -26,10 +27,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1B0330), // Matches image background
-      body: Stack(
-        children: [
-          SingleChildScrollView(
+      backgroundColor: Colors.transparent,
+      body: AnimatedGradientBackground(
+        child: Stack(
+          children: [
+            SingleChildScrollView(
             child: ConstrainedBox(
               constraints: BoxConstraints(
                 minHeight: MediaQuery.of(context).size.height,
@@ -73,16 +75,17 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           ),
           
           // Floating Action Button
-          Positioned(
-            bottom: 30,
-            right: 30,
-            child: FloatingActionButton(
-              onPressed: () {},
-              backgroundColor: const Color(0xFF512DA8),
-              child: const Icon(Icons.map_outlined, color: Colors.white, size: 35),
+            Positioned(
+              bottom: 30,
+              right: 30,
+              child: FloatingActionButton(
+                onPressed: () {},
+                backgroundColor: const Color(0xFF512DA8),
+                child: const Icon(Icons.map_outlined, color: Colors.white, size: 35),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

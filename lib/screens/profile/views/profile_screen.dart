@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:voyant/blocs/authentication_bloc/authentication_bloc.dart';
 import 'package:voyant/components/badge_build.dart';
-import 'package:voyant/components/quest_display_section.dart';
+import 'package:voyant/widgets/animated_gradient_background.dart';
+import '../../referral_system/refer_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -14,24 +15,26 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
-    const bgColor = Color.fromARGB(255, 0, 0, 1);
-    
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: bgColor,
+        backgroundColor: const Color(0xFF12121A),
         elevation: 0,
         title: const Text('User Profile'),
         centerTitle: true,
       ),
-      body: SafeArea( //ensures that padding will be applied to avoid UI from overlaping with device notches or other features 
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            const HeadSection(),
-            const SizedBox(height: 24),
-            const Stats(),
-          ],
+      body: AnimatedGradientBackground(
+        child: SafeArea( //ensures that padding will be applied to avoid UI from overlaping with device notches or other features 
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              const HeadSection(),
+              const SizedBox(height: 24),
+              const Stats(),
+              const SizedBox(height: 24),
+              const ReferralSection(),
+            ],
+          ),
         ),
       ),
     );
@@ -109,11 +112,96 @@ class Stats extends StatelessWidget {
         const SizedBox(height: 30),
         const Text("Completed Quests",style: TextStyle(color: Colors.white, fontSize : 16, fontWeight: FontWeight.bold)),
         const SizedBox(height: 12),
-        const QuestDisplaySection(),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF12121A),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
+          ),
+          child: const Text(
+            "Quests display",
+            style: TextStyle(color: Colors.white70, fontSize: 14),
+          ),
+        ),
       ],
     );
   }
 }
 
+//referral button 
+class ReferralSection extends StatelessWidget {
+  const ReferralSection({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF12121A),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.cyanAccent.withOpacity(0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.star,
+                color: Colors.cyanAccent,
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Refer & Earn Rewards',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Invite your friends and earn rewards together!',
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const ReferScreenView(),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.share, size: 20),
+              label: const Text('Refer Friends'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.cyanAccent,
+                foregroundColor: const Color(0xFF1B0033),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 //Todo - building the badge build as reusable components 
-//Todo - building quest displaybox to display the quests properly 
+//Todo - building quest displaybox to display the quests properly

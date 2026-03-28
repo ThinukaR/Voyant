@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:voyant/screens/map/map.dart';
+import 'package:voyant/screens/home/views/mapscreen.dart';
 import 'package:voyant/screens/home/views/home_tab.dart';
 import 'package:voyant/screens/trips/views/trips_list_screen.dart';
 import 'package:voyant/screens/avatar/views/cosmetic_screen.dart';
-import 'package:voyant/screens/avatar/views/avatar_screen.dart';
 import 'package:voyant/screens/skillTree/skillTree.dart';
+import 'package:voyant/theme/app_background.dart';
 
 class RootScreen extends StatefulWidget {
   const RootScreen({super.key});
@@ -21,13 +21,13 @@ class _RootScreenState extends State<RootScreen> {
     final List<Widget> screens = [
       HomeTab(onTripsTap: () => setState(() => _currentIndex = 1)),
       const TripsTab(),
-      const Map(),
+      const MapScreen(),
       const SkillTreeScreen(),
-      const AvatarScreen(),
+      const CosmeticScreen(),
     ];
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0F),
+      backgroundColor: AppBackground.scaffold,
       body: screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,

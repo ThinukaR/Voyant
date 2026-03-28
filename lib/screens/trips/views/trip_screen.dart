@@ -19,7 +19,7 @@ class TripDetailScreen extends StatefulWidget {
 }
 
 class _TripDetailScreenState extends State<TripDetailScreen> {
-  static const String baseUrl = 'http://10.0.2.2:3000/api';
+  static const String baseUrl = 'https://api-cbmysz2x4a-uc.a.run.app/api';
 
   List<dynamic> quests = [];
   bool isLoading = true;

@@ -1,85 +1,84 @@
-// controllers/questController.js
+
 const Quest = require("../models/Quest");
 const UserQuestProgress = require("../models/UserQuestProgress");
+const UserTrips = require("../models/UserTrips");
 const admin = require("../firebase/firebaseAdmin");
 const mongoose = require("mongoose");
 
-// get all quests for trip (including map icons)
-exports.getQuestsForTrip = async (req, res) => {
+//get all quests 
+exports.getAllUserQuests = async (req, res) => {
   try {
-    const quests = await Quest.find({ tripId: req.params.tripId }).select(
-      " title difficulty totalXP mapPosition tasks",
-    );
-    // taking the progress of user in each quest
-    const progressList = await UserQuestProgress.find({
-      userId: req.userId,
-      tripId: req.params.tripId,
+    const userId = req.userId;
+    
+    //get user's trips with their quests
+    const userTrips = await UserTrips.find({ userId });
+    const tripIds = userTrips.map(trip => trip.tripID);
+    
+    //get all quests for user (trip, main, location, npc)
+    const allQuests = await Quest.find({
+      $or: [
+        { tripId: { $in: tripIds } }, // Trip quests
+        { questType: "main_quest" }, // Main quests (always available)
+        { questType: "location_quest" }, // Location quests
+        { questType: "npc_quest" } // NPC quests
+      ]
     });
-
-    // merge progress into each quest
-    const result = quests.map((quest) => {
+    
+    //get user's progress for these quests
+    const progressList = await UserQuestProgress.find({ 
+      userId, 
+      questId: { $in: allQuests.map(q => q._id) }
+    });
+    
+    //merge progress into quests
+    const result = allQuests.map(quest => {
       const progress = progressList.find(
-        (p) => p.questId.toString() === quest._id.toString(),
+        p => p.questId.toString() === quest._id.toString()
       );
+      
       return {
         ...quest.toObject(),
         userStatus: progress ? progress.status : "not_started",
-        tasksCompleted: progress
-          ? progress.taskProgress.filter((t) => t.isCompleted).length
+        tasksCompleted: progress 
+          ? progress.taskProgress.filter(t => t.isCompleted).length 
           : 0,
+        totalTasks: quest.tasks.length,
+        progress: progress || null
       };
     });
-
-    return res.json(result);
+    
+    //grouping quests by type 
+    const groupedQuests = {
+      main_quests: result.filter(q => q.questType === 'main_quest'),
+      trip_quests: result.filter(q => q.questType === 'trip_quest'),
+      location_quests: result.filter(q => q.questType === 'location_quest'),
+      npc_quests: result.filter(q => q.questType === 'npc_quest')
+    };
+    
+    return res.json({
+      quests: groupedQuests,
+      trips: userTrips,
+      allQuests: result 
+    });
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
 };
 
-// get quest with all task details + user progress
-exports.getQuest = async (req, res) => {
-  console.log("req.userId:", req.userId);
-  console.log("questId:", req.params.id);
+//get quest by ID 
+exports.getQuestById = async (req, res) => {
   try {
     const quest = await Quest.findById(req.params.id);
     if (!quest) return res.status(404).json({ message: "Quest not found" });
 
-    console.log("Query:", { userId: req.userId, questId: req.params.id });
     const progress = await UserQuestProgress.findOne({
       userId: req.userId,
       questId: new mongoose.Types.ObjectId(req.params.id),
     });
 
-    console.log("Progress:", progress);
-    console.log("Collection:", UserQuestProgress.collection.name);
-    console.log("Searching for userId:", req.userId, "questId:", req.params.id);
-    console.log("All progress docs:", await UserQuestProgress.find({}));
-    console.log("Progress found:", JSON.stringify(progress)); // ← add this
-
-    // merge task-level completion into quest tasks
-    const tasks = quest.tasks.map((task) => {
-      const taskProgress = progress?.taskProgress.find(
-        (tp) => tp.taskId.toString() === task._id.toString(),
-      );
-
-      console.log(
-        "Task:",
-        task._id,
-        "TaskProgress:",
-        JSON.stringify(taskProgress),
-      );
-
-      return {
-        ...task.toObject(),
-        isCompleted: taskProgress?.isCompleted || false,
-        // locked if previous task not done (linear unlock)
-        isLocked: !isTaskUnlocked(task.order, progress),
-      };
-    });
-
     return res.json({
       ...quest.toObject(),
-      tasks,
+      questType: 'trip_quest', // Unified type
       userStatus: progress?.status || "not_started",
       totalXPEarned: progress?.totalXPEarned || 0,
     });
@@ -88,12 +87,13 @@ exports.getQuest = async (req, res) => {
   }
 };
 
+//start quest 
 exports.startQuest = async (req, res) => {
   try {
     const quest = await Quest.findById(req.params.id);
     if (!quest) return res.status(404).json({ message: "Quest not found" });
 
-    // if it is already started
+    //checks if already started
     const existing = await UserQuestProgress.findOne({
       userId: req.userId,
       questId: new mongoose.Types.ObjectId(req.params.id),
@@ -101,8 +101,8 @@ exports.startQuest = async (req, res) => {
 
     if (existing) return res.json(existing);
 
-    // creating progress record
-    const taskProgress = quest.tasks.map((task) => ({
+    //creating progress record
+    const taskProgress = quest.tasks.map(task => ({
       taskId: task._id,
       isCompleted: false,
       xpAwarded: 0,
@@ -113,6 +113,8 @@ exports.startQuest = async (req, res) => {
       questId: quest._id,
       tripId: quest.tripId,
       taskProgress,
+      status: 'in_progress',
+      startedAt: new Date(),
     });
 
     return res.status(201).json(progress);
@@ -121,6 +123,7 @@ exports.startQuest = async (req, res) => {
   }
 };
 
+//complete task 
 exports.completeTask = async (req, res) => {
   try {
     const quest = await Quest.findById(req.params.id);
@@ -129,48 +132,49 @@ exports.completeTask = async (req, res) => {
     const task = quest.tasks.id(req.params.taskId);
     if (!task) return res.status(404).json({ message: "Task not found" });
 
+    //award XP in Firestore
+    const { leveledUp, newLevel } = await awardXP(
+      req.userId,
+      task.xpReward,
+    );
+
     const progress = await UserQuestProgress.findOne({
       userId: req.userId,
       questId: new mongoose.Types.ObjectId(req.params.id),
     });
+    
     if (!progress)
       return res.status(400).json({ message: "Start the quest first" });
 
-    // check task isn't already done
+    //check - if task is alredy done or not 
     const taskProgress = progress.taskProgress.find(
-      (tp) => tp.taskId.toString() === task._id.toString(),
+      tp => tp.taskId.toString() === task._id.toString()
     );
+    
     if (taskProgress?.isCompleted) {
       return res.status(400).json({ message: "Task already completed" });
     }
 
-    // check task is actually unlocked
-    if (!isTaskUnlocked(task.order, progress)) {
-      return res.status(400).json({ message: "Task is locked" });
-    }
-
-    // validate the answer based on task type
+    //validation of answer
     const validationResult = await validateTaskAnswer(task, req.body);
     if (!validationResult.passed) {
       return res.status(400).json({ message: validationResult.reason });
     }
 
-    // mark complete
+    //mark complete
     taskProgress.isCompleted = true;
     taskProgress.completedAt = new Date();
     taskProgress.xpAwarded = task.xpReward;
     progress.totalXPEarned += task.xpReward;
 
-    // check if all tasks done
-    const allDone = progress.taskProgress.every((tp) => tp.isCompleted);
+    //check - if all the tasks done
+    const allDone = progress.taskProgress.every(tp => tp.isCompleted);
     if (allDone) {
       progress.status = "completed";
       progress.completedAt = new Date();
     }
 
     await progress.save();
-
-    // award XP in Firestore
     await awardXP(req.userId, task.xpReward);
 
     return res.json({
@@ -178,26 +182,215 @@ exports.completeTask = async (req, res) => {
       xpAwarded: task.xpReward,
       questCompleted: allDone,
       totalXPEarned: progress.totalXPEarned,
+      leveledUp,
+      newLevel,
     });
   } catch (err) {
     return res.status(400).json({ message: err.message });
   }
 };
 
-function isTaskUnlocked(taskOrder, progress) {
-  if (taskOrder === 1) return true;
-  if (!progress) return false;
-  // count how many tasks completed
-  const completedCount = progress.taskProgress.filter(
-    (tp) => tp.isCompleted,
-  ).length;
-  return completedCount >= taskOrder - 1;
+//get dialogue for quest
+exports.getQuestDialogue = async (req, res) => {
+  try {
+    const quest = await Quest.findById(req.params.id);
+    if (!quest) return res.status(404).json({ message: "Quest not found" });
+
+    const progress = await UserQuestProgress.findOne({
+      userId: req.userId,
+      questId: new mongoose.Types.ObjectId(req.params.id),
+    });
+
+    if (!progress) {
+      return res.status(400).json({ message: "Start the quest first" });
+    }
+
+
+    //get current dialogue based on progress
+    const currentTask = quest.tasks.id(progress.taskProgress.find(tp => !tp.isCompleted)?.taskId);
+    
+
+    if (!currentTask || currentTask.type !== 'dialogue') {
+      return res.status(400).json({ message: "No dialogue available" });
+    }
+
+
+
+    return res.json({
+      dialogue: currentTask.dialogueData,
+      questId: quest._id,
+      taskId: currentTask._id,
+      progress: progress
+    });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+};
+
+//process dialogue choice
+exports.processDialogueChoice = async (req, res) => {
+  try {
+    const { choice, nextDialogueId } = req.body;
+    const questId = req.params.id;
+
+    const quest = await Quest.findById(questId);
+    if (!quest) return res.status(404).json({ message: "Quest not found" });
+
+    const progress = await UserQuestProgress.findOne({
+      userId: req.userId,
+      questId: new mongoose.Types.ObjectId(questId),
+    });
+
+    if (!progress) {
+      return res.status(400).json({ message: "Start the quest first" });
+    }
+
+    //records user choice
+    progress.userChoices = progress.userChoices || [];
+    progress.userChoices.push({
+      choice: choice,
+      timestamp: new Date()
+    });
+
+    //check - seeing if dialogue is complete
+    if (nextDialogueId === 'complete' || !nextDialogueId) {
+      const currentTask = quest.tasks.id(progress.taskProgress.find(tp => !tp.isCompleted)?.taskId);
+      if (currentTask && currentTask.type === 'dialogue') {
+        const taskProgress = progress.taskProgress.find(
+          tp => tp.taskId.toString() === currentTask._id.toString()
+        );
+        
+        if (taskProgress) {
+          taskProgress.isCompleted = true;
+          taskProgress.completedAt = new Date();
+          taskProgress.xpAwarded = currentTask.xpReward || 0;
+          progress.totalXPEarned += taskProgress.xpAwarded;
+        }
+      }
+    }
+
+    await progress.save();
+
+    return res.json({
+      success: true,
+      nextDialogueId: nextDialogueId,
+      progress: progress
+    });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+};
+
+//location-based quest triggers 
+exports.checkNearbyTriggers = async (req, res) => {
+  try {
+    const { userId, lat, lng, radius = 100 } = req.query;
+    
+    const userLat = parseFloat(lat);
+    const userLng = parseFloat(lng);
+    const searchRadius = parseInt(radius);
+    
+    //find active nearby location triggers
+    const nearbyTriggers = await QuestTrigger.find({
+      triggerType: 'location',
+      isActive: true,
+      'location.coordinates': {
+        $near: {
+          $geometry: {
+            type: "Point",
+            coordinates: [userLng, userLat]
+          },
+          $maxDistance: searchRadius
+        }
+      }
+    }).sort({ priority: -1 });
+    
+    //filter triggers based on user conditions
+    const availableTriggers = [];
+    
+    for (const trigger of nearbyTriggers) {
+      const alreadyTriggered = trigger.triggeredBy.some(
+        t => t.userId === userId
+      );
+      
+      if (trigger.triggerOnce && alreadyTriggered) {
+        continue;
+      }
+      
+      availableTriggers.push({
+        triggerId: trigger._id,
+        triggerType: trigger.triggerType,
+        location: trigger.location,
+        actions: trigger.actions,
+        distance: calculateDistance(
+          userLat, userLng,
+          trigger.location.coordinates.lat,
+          trigger.location.coordinates.lng
+        )
+      });
+    }
+    
+    res.json({
+      triggers: availableTriggers,
+      userLocation: { lat: userLat, lng: userLng },
+      searchRadius
+    });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+};
+
+//helper functions 
+async function awardXP(userId, xp) {
+  const db = admin.firestore();
+  const userRef = db.collection("users").doc(userId);
+
+  let leveledUp = false;
+  let newLevel = 0;
+
+  await db.runTransaction(async (t) => {
+    const doc = await t.get(userRef);
+    const currentXP = doc.exists ? doc.data().totalXP || 0 : 0;
+    const currentLevel = doc.exists ? doc.data().level || 0 : 0;
+
+    const newTotalXP = currentXP + xp;
+    const newTotalSP = Math.floor(newTotalXP / 100);
+
+    newLevel = Math.floor(newTotalXP / 1000);
+
+    if (newLevel > currentLevel) {
+      leveledUp = true;
+    }
+
+    t.set(
+      userRef,
+      {
+        totalXP: newTotalXP,
+        skillPoints: newTotalSP,
+        level: newLevel,
+      },
+      { merge: true },
+    );
+  });
+
+  return { leveledUp, newLevel };
+}
+
+function calculateDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 async function validateTaskAnswer(task, body) {
   switch (task.type) {
-    case "geofence": {
-      // body = { userLat, userLng }
+    case "geofence":
       const distance = getDistanceMeters(
         body.userLat,
         body.userLng,
@@ -211,94 +404,39 @@ async function validateTaskAnswer(task, body) {
         };
       }
       return { passed: true };
-    }
-
-    case "number_input": {
-      // body = { answer: 14 }
+    
+    case "number_input":
       if (parseInt(body.answer) !== task.numberInputData.correctAnswer) {
         return { passed: false, reason: "Wrong answer, try again" };
       }
       return { passed: true };
-    }
-
-    case "string_input": {
-      console.log("task stringInputData:", task.stringInputData);
-      console.log("full task:", JSON.stringify(task));
+    
+    case "string_input":
       const correct = task.stringInputData.correctAnswer.toLowerCase().trim();
       const given = body.answer.toLowerCase().trim();
       if (given !== correct) {
         return { passed: false, reason: "Wrong answer, try again" };
       }
       return { passed: true };
-    }
-
-    case "photo": {
-    }
-    case "checkin":
-    case "find_object":
-    case "spot_diff": {
-    }
-
+    
+    case "multiple_choice":
+      const multipleChoiceCorrect = task.multipleChoiceData.correctAnswer
+        .toLowerCase()
+        .trim();
+      const multipleChoiceGiven = (body.answer || "").toLowerCase().trim();
+      if (multipleChoiceGiven !== multipleChoiceCorrect) {
+        return { passed: false, reason: "Wrong answer, try again" };
+      }
+      return { passed: true };
+    
+    case "true_false":
+      const trueFalseGiven = body.answer === true || body.answer === "true";
+      if (trueFalseGiven !== task.trueFalseData.correctAnswer) {
+        return { passed: false, reason: "Wrong answer, try again" };
+      }
+      return { passed: true };
+    
     default:
       return { passed: true };
   }
 }
-
-function getDistanceMeters(lat1, lng1, lat2, lng2) {
-  const R = 6371000;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-async function awardXP(userId, xp) {
-  const db = admin.firestore();
-  const userRef = db.collection("users").doc(userId);
-  await db.runTransaction(async (t) => {
-    const doc = await t.get(userRef);
-    const current = doc.exists ? doc.data().totalXP || 0 : 0;
-
-    // calculate new SP — 1 SP per 100 XP earned
-    const newTotalXP = currentXP + xp;
-    const newTotalSP = Math.floor(newTotalXP / 100);
-
-    t.set(userRef, { totalXP: current + xp }, { merge: true });
-  });
-}
-
-exports.createQuest = async (req, res) => {
-  try {
-    const doc = await Quest.create(req.body);
-    return res.status(201).json(doc);
-  } catch (err) {
-    return res.status(400).json({ message: err.message });
-  }
-};
-
-exports.updateQuest = async (req, res) => {
-  try {
-    const doc = await Quest.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
-    if (!doc) return res.status(404).json({ message: "Not found" });
-    return res.json(doc);
-  } catch (err) {
-    return res.status(400).json({ message: err.message });
-  }
-};
-
-exports.deleteQuest = async (req, res) => {
-  try {
-    const doc = await Quest.findByIdAndDelete(req.params.id);
-    if (!doc) return res.status(404).json({ message: "Not found" });
-    return res.status(204).send();
-  } catch (err) {
-    return res.status(400).json({ message: err.message });
-  }
-};

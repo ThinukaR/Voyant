@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:voyant/theme/app_background.dart';
 
 class AnimatedGradientBackground extends StatefulWidget {
   final Widget child;
@@ -62,11 +63,7 @@ class _AnimatedGradientBackgroundState extends State<AnimatedGradientBackground>
             gradient: LinearGradient(
               begin: _topAlignment.value,
               end: _bottomAlignment.value,
-              colors: const [
-                Color(0xFF0A0A0F),
-                Color(0xFF1A0A2E),
-                Color(0xFF551161),
-              ],
+              colors: AppBackground.tripGradient,
             ),
           ),
           child: child,

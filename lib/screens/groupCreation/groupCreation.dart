@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:voyant/widgets/animated_gradient_background.dart';
 
 class CreateGroupScreen extends StatefulWidget {
   const CreateGroupScreen({super.key});
@@ -89,9 +90,10 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D0A1E),
-      body: SafeArea(
-        child: Column(
+      backgroundColor: Colors.transparent,
+      body: AnimatedGradientBackground(
+        child: SafeArea(
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ── Header ──────────────────────────────────────
@@ -488,6 +490,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
               ),
             ),
           ],
+          ),
         ),
       ),
     );

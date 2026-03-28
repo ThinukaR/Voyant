@@ -230,8 +230,8 @@ class AvatarBloc extends Bloc<AvatarEvent, AvatarState> {
       
       // Cast to Firestore repo to use the extended delete method
       if (_avatarRepository is FirestoreAvatarRepository) {
-        await (_avatarRepository as FirestoreAvatarRepository)
-            .deleteAvatarForUser(currentUser.userId, event.avatarId);
+        final repo = _avatarRepository as FirestoreAvatarRepository;
+        await repo.deleteAvatarForUser(currentUser.userId, event.avatarId);
       } else {
         await _avatarRepository.deleteAvatar(event.avatarId);
       }

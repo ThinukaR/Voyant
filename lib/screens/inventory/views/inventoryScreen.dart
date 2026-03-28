@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:voyant/widgets/animated_gradient_background.dart';
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -13,11 +14,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
+      backgroundColor: Colors.transparent,
+      body: AnimatedGradientBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Top row: cosmetic category blocks on the left
@@ -109,6 +111,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 ),
               ),
             ],
+            ),
           ),
         ),
       ),
