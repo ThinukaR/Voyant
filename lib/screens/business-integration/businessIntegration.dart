@@ -154,7 +154,37 @@ Widget build(BuildContext context) {
   return Scaffold(
     backgroundColor: Colors.transparent,
     appBar: AppBar(
-      title: const Text('Business Integration'),
+      title: const Text('Business Profile'),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      flexibleSpace: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              const Color(0xFF6366F1).withOpacity(0.1),
+              const Color(0xFF4A148C).withOpacity(0.1),
+            ],
+          ),
+          border: Border(
+            bottom: BorderSide(
+              color: const Color(0xFF6366F1).withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+        ),
+      ),
+      titleTextStyle: const TextStyle(
+        color: Colors.white,
+        fontSize: 20,
+        fontWeight: FontWeight.bold,
+        letterSpacing: 0.5,
+      ),
+      iconTheme: const IconThemeData(
+        color: Colors.white,
+        size: 24,
+      ),
     ),
     body: AnimatedGradientBackground(
       child: _isLoading
