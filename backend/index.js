@@ -1,3 +1,14 @@
+// Add global error handlers FIRST before anything else
+process.on("uncaughtException", (error) => {
+  console.error("[FATAL] Uncaught Exception:", error);
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("[FATAL] Unhandled Rejection at:", promise, "reason:", reason);
+  process.exit(1);
+});
+
 const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 
@@ -12,20 +23,36 @@ if (!process.env.MONGO_URI) {
 require("./firebase/firebaseAdmin");
 
 const express = require("express");
+console.log("[STARTUP] ✓ Express loaded");
+
 const connectToDatabase = require("./db");
-const avatarRoutes = require("./routes/avatarRoutes");
-const destinationRoutes = require("./routes/destinationRoutes");
-const questRoutes = require("./routes/questRoutes"); 
-const skillRoutes = require("./routes/skillRoutes");
-const userAccountDetailsRoutes = require("./routes/userAccountDetailsRoutes");
-const userGroupRoutes = require("./routes/userGroupRoutes");
-const userSkillRoutes = require("./routes/userSkillsRoutes");
-const userTripRoutes = require("./routes/userTripRoutes");
-const userRewardRoutes = require("./routes/userRewardRoutes");
-const messageLogRoutes = require("./routes/messageLogRoutes");
+console.log("[STARTUP] ✓ Database module loaded");
+
+// Load all routes with error handling
+console.log("[STARTUP] Loading routes...");
+let avatarRoutes, destinationRoutes, questRoutes, skillRoutes,
+    userAccountDetailsRoutes, userGroupRoutes, userSkillRoutes,
+    userTripRoutes, userRewardRoutes, messageLogRoutes;
+
+try {
+  avatarRoutes = require("./routes/avatarRoutes");
+  destinationRoutes = require("./routes/destinationRoutes");
+  questRoutes = require("./routes/questRoutes");
+  skillRoutes = require("./routes/skillRoutes");
+  userAccountDetailsRoutes = require("./routes/userAccountDetailsRoutes");
+  userGroupRoutes = require("./routes/userGroupRoutes");
+  userSkillRoutes = require("./routes/userSkillsRoutes");
+  userTripRoutes = require("./routes/userTripRoutes");
+  userRewardRoutes = require("./routes/userRewardRoutes");
+  messageLogRoutes = require("./routes/messageLogRoutes");
+  console.log("[STARTUP] ✓ All routes loaded successfully");
+} catch (err) {
+  console.error("[ERROR] Failed to load routes:", err.message);
+  console.error("[ERROR] Stack trace:", err.stack);
+  process.exit(1);
+}
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // Parse JSON requests FIRST
 app.use(express.json());
@@ -58,7 +85,7 @@ app.use('/api', async (req, res, next) => {
 app.use("/api/user-account-details", userAccountDetailsRoutes);
 app.use("/api/avatars", avatarRoutes);
 app.use("/api/destinations", destinationRoutes);
-app.use("/api/quests", questRoutes); 
+app.use("/api/quests", questRoutes);
 app.use("/api/skills", skillRoutes);
 app.use("/api/user-groups", userGroupRoutes);
 app.use("/api/user-skills", userSkillRoutes);
