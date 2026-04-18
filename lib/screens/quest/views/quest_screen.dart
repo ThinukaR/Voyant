@@ -9,11 +9,7 @@ class QuestScreen extends StatefulWidget {
   final Quest quest;
   final QuestProgress? initialProgress;
 
-  const QuestScreen({
-    super.key,
-    required this.quest,
-    this.initialProgress,
-  });
+  const QuestScreen({super.key, required this.quest, this.initialProgress});
 
   @override
   State<QuestScreen> createState() => _QuestScreenState();
@@ -21,10 +17,14 @@ class QuestScreen extends StatefulWidget {
 
 class _QuestScreenState extends State<QuestScreen> {
   QuestProgress? _currentProgress;
-  Task? _currentTask;
-  List<Task> _availableTasks = [];
+  Task? _currentTask; // used as a scratch variable by _buildTaskContentFor
   bool _isLoading = false;
   String? _error;
+  String? taskId;
+  bool _progressChanged = false;
+
+  // controller for text inputs
+  final _controller = TextEditingController();
 
   @override
   void initState() {
@@ -39,88 +39,101 @@ class _QuestScreenState extends State<QuestScreen> {
         _error = null;
       });
 
-      //existing prorgess is used or new progress is made
-      if (widget.initialProgress != null) {
-        _currentProgress = widget.initialProgress;
-      } else {
-        //creates empty prorgess for new quests 
-        _currentProgress = null;
-      }
+      // Always refresh progress from server so UI advances correctly.
+      // If server says "not started", progress will be null.
+      _currentProgress = await QuestService().getQuestProgress(widget.quest.id);
 
-      _updateAvailableTasks();
-      _findNextUncompletedTask();
-      setState(() {
-        _isLoading = false;
-      });
+      // If we were launched with initialProgress (from pressing START),
+      // use it as a fallback in case the server hasn't updated yet.
+      _currentProgress ??= widget.initialProgress;
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
-    }
-  }
-
-  void _updateAvailableTasks() {
-    _availableTasks = widget.quest.tasks.where((task) => !task.isLocked).toList();
-  }
-
-  Task? _findNextUncompletedTask() {
-    if (_currentProgress != null) {
-      final completedTaskIds = _currentProgress!.taskProgress
-          .where((tp) => tp.isCompleted)
-          .map((tp) => tp.taskId)
-          .toSet();
-
-      for (final task in _availableTasks) {
-        if (!completedTaskIds.contains(task.id)) {
-          _currentTask = task;
-          return _currentTask;
-        }
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
       }
     }
-
-    _currentTask = _availableTasks.isNotEmpty ? _availableTasks.first : null;
-    return _currentTask;
   }
 
-  Future<void> _completeTask(String taskId) async {
+  Set<String> _completedTaskIds() {
+    return _currentProgress?.taskProgress
+            .where((tp) => tp.isCompleted)
+            .map((tp) => tp.taskId)
+            .toSet() ??
+        <String>{};
+  }
+
+  int _firstIncompleteIndex(List<Task> tasks, Set<String> completedIds) {
+    for (var i = 0; i < tasks.length; i++) {
+      if (!completedIds.contains(tasks[i].id)) return i;
+    }
+    return tasks.length; // all complete
+  }
+
+  Future<void> _completeTask(
+    String taskId, {
+    Map<String, dynamic> answer = const {},
+  }) async {
     try {
       setState(() {
         _isLoading = true;
-        _error = null;
       });
 
       final result = await QuestService().completeTask(
         widget.quest.id,
         taskId,
-        <String, dynamic>{},
+        answer,
       );
 
-      if (result['passed'] == true) {
+      if (!mounted) return;
 
-        //refreshing progress
+      if (result['passed'] == true) {
+        _progressChanged = true;
         await _loadQuestData();
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Correct!'),
+            backgroundColor: Colors.green,
+          ),
+        );
       } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['reason'] ?? 'Wrong answer, try again'),
+            backgroundColor: Colors.red,
+          ),
+        );
+
         setState(() {
-          _error = result['reason'] ?? 'Task completion failed';
           _isLoading = false;
         });
       }
     } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+      );
+
       setState(() {
-        _error = e.toString();
         _isLoading = false;
       });
     }
   }
 
   void _processDialogueChoice(String choice, String? nextDialogueId) {
-    //handling dialogue choices
-    print('Choice: $choice, Next: $nextDialogueId');
+    // handling dialogue choices (hook this to backend later if needed)
+    debugPrint('Choice: $choice, Next: $nextDialogueId');
   }
-
-  //conroller for text inputs
-  final _controller = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -162,7 +175,7 @@ class _QuestScreenState extends State<QuestScreen> {
                     Row(
                       children: [
                         GestureDetector(
-                          onTap: () => Navigator.pop(context),
+                          onTap: () => Navigator.pop(context, _progressChanged),
                           child: const Icon(
                             Icons.arrow_back_ios,
                             color: Colors.white,
@@ -182,8 +195,7 @@ class _QuestScreenState extends State<QuestScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 6),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 12),
                     // status badge
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -212,151 +224,218 @@ class _QuestScreenState extends State<QuestScreen> {
                   ],
                 ),
               ),
-              Expanded(
-                child: _buildQuestBody(),
-              ),
+              Expanded(child: _buildQuestBody()),
             ],
           ),
-      ),
         ),
+      ),
     );
   }
 
   Widget _buildQuestBody() {
-    if (_currentTask == null) {
+    final tasks = [...widget.quest.tasks]
+      ..sort((a, b) => a.order.compareTo(b.order));
+
+    if (tasks.isEmpty) {
       return const Center(
         child: Text(
-          'No available tasks',
-          style: TextStyle(
-            color: Color(0xFFB3B3B3),
-            fontSize: 18,
-          ),
+          'No tasks in this quest',
+          style: TextStyle(color: Color(0xFFB3B3B3), fontSize: 18),
         ),
       );
     }
 
-    return SingleChildScrollView(
+    final completedIds = _completedTaskIds();
+    final firstIncomplete = _firstIncompleteIndex(tasks, completedIds);
+
+    if (firstIncomplete >= tasks.length) {
+      return const Center(
+        child: Text(
+          'Quest completed!',
+          style: TextStyle(color: Colors.white, fontSize: 18),
+        ),
+      );
+    }
+
+    return ListView.builder(
       padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Quest info card for the active task.
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: const Color(0xFF4A148C).withOpacity(0.3),
-                width: 2,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      itemCount: tasks.length,
+      itemBuilder: (context, index) {
+        final task = tasks[index];
+        final isCompleted = completedIds.contains(task.id);
+        final isUnlocked =
+            index == firstIncomplete; // only next incomplete is playable
+        final isLockedByOrder = !isCompleted && !isUnlocked;
+
+        return _buildTaskCard(
+          task: task,
+          isCompleted: isCompleted,
+          isUnlocked: isUnlocked,
+          isLockedByOrder: isLockedByOrder,
+          positionLabel: 'Task ${index + 1} of ${tasks.length}',
+        );
+      },
+    );
+  }
+
+  Widget _buildTaskCard({
+    required Task task,
+    required bool isCompleted,
+    required bool isUnlocked,
+    required bool isLockedByOrder,
+    required String positionLabel,
+  }) {
+    final content = _buildTaskContentFor(task, enabled: isUnlocked);
+
+    return Opacity(
+      opacity: isLockedByOrder ? 0.45 : 1.0,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isUnlocked
+                ? const Color(0xFFB020DD).withOpacity(0.8)
+                : Colors.white.withOpacity(0.15),
+            width: 2,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // header row
+            Row(
               children: [
-                Text(
-                  _currentTask!.title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Text(
+                    task.title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  _currentTask!.description,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.task_alt,
-                      color: Colors.white.withOpacity(0.7),
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Task ${_availableTasks.indexOf(_currentTask!) + 1} of ${_availableTasks.length}',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Icon(
-                      Icons.star,
-                      color: Colors.white.withOpacity(0.7),
-                      size: 20,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${_currentTask!.xpReward} XP',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
+                if (isCompleted)
+                  const Icon(Icons.check_circle, color: Colors.green)
+                else if (isLockedByOrder)
+                  const Icon(Icons.lock, color: Colors.white70)
+                else
+                  const Icon(Icons.play_circle_fill, color: Colors.white),
               ],
             ),
-          ),
-          const SizedBox(height: 24),
-          _buildTaskContent(),
-          const SizedBox(height: 24),
-          if (_currentTask!.type != 'dialogue')
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : () => _completeTask(_currentTask!.id),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4A148C),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text(
-                        'Complete Task',
-                        style: TextStyle(fontSize: 16),
-                      ),
+            const SizedBox(height: 6),
+            Text(
+              positionLabel,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.7),
+                fontSize: 12,
               ),
             ),
-        ],
+            const SizedBox(height: 10),
+            Text(
+              task.description,
+              style: TextStyle(color: Colors.white.withOpacity(0.85)),
+            ),
+            const SizedBox(height: 12),
+
+            // task content (options/input/etc.)
+            content,
+
+            const SizedBox(height: 12),
+
+            // action area
+            if (isCompleted)
+              Text(
+                'Completed (+${task.xpReward} XP)',
+                style: TextStyle(color: Colors.green.withOpacity(0.9)),
+              )
+            else if (isLockedByOrder)
+              Text(
+                'Complete the previous task to unlock this.',
+                style: TextStyle(color: Colors.white.withOpacity(0.7)),
+              ),
+            /*else if (task.type != 'dialogue')
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : () => _completeTask(task.id),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4A148C),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: const Text('Complete Task'),
+                ),
+              ),*/
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildTaskContent() {
+  Widget _buildTaskContentFor(Task task, {required bool enabled}) {
+    final prev = _currentTask;
+    _currentTask = task;
+
+    final result = IgnorePointer(
+      ignoring: !enabled,
+      child: _buildTaskContentForId(task.id), // <-- pass stable id
+    );
+
+    _currentTask = prev;
+    return result;
+  }
+
+  Widget _buildTaskContentForId(String taskId) {
     switch (_currentTask!.type) {
       case 'multiple_choice':
-        return _buildMultipleChoiceTask();
+        return _buildMultipleChoiceTask(taskId);
       case 'dialogue':
-        return _buildDialogueTask();
+        return _buildDialogueTask(); // no submit here
       case 'geofence':
         return _buildGeofenceTask();
       case 'checkin':
         return _buildCheckinTask();
       case 'number_input':
-        return _buildNumberInputTask();
+        return _buildNumberInputTask(taskId);
       case 'string_input':
-        return _buildStringInputTask();
+        return _buildStringInputTask(taskId);
       case 'true_false':
-        return _buildTrueFalseTask();
+        return _buildTrueFalseTask(taskId);
       default:
         return _buildDefaultTask();
     }
   }
 
-  Widget _buildMultipleChoiceTask() {
-    final options = _currentTask!.taskData?['options'] ?? [];
+  Widget _buildMultipleChoiceTask(String taskId) {
+    final taskData = _currentTask!.taskData as Map<String, dynamic>?;
+
+    if (taskData == null) {
+      return const Text(
+        'No multiple choice data found for this task.',
+        style: TextStyle(color: Colors.white),
+      );
+    }
+
+    final question = taskData?['question']?.toString() ?? '';
+    final optionsRaw = taskData?['options'];
+
+    // Normalize options into a list of maps like: [{ "text": "..." }, ...]
+    final List<Map<String, dynamic>> options = switch (optionsRaw) {
+      final List list => list.map<Map<String, dynamic>>((o) {
+        if (o is Map) return Map<String, dynamic>.from(o);
+        if (o is String) return {'text': o};
+        return {'text': o.toString()};
+      }).toList(),
+      final String s => [
+        {'text': s},
+      ],
+      _ => const [],
+    };
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -367,7 +446,7 @@ class _QuestScreenState extends State<QuestScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            _currentTask!.taskData?['question'] ?? '',
+            question,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 18,
@@ -375,31 +454,37 @@ class _QuestScreenState extends State<QuestScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          ...options.map((option) => Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: ElevatedButton(
-              onPressed: () => _completeTask(_currentTask!.id),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white.withOpacity(0.1),
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 48),
-              ),
-              child: Text(
-                option['text'] ?? 'Option',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
+          ...options.map(
+            (option) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: ElevatedButton(
+                onPressed: _isLoading
+                    ? null
+                    : () => _completeTask(
+                        taskId,
+                        answer: {'answer': option['text']?.toString() ?? ''},
+                      ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white.withOpacity(0.1),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 48),
+                ),
+                child: Text(
+                  option['text']?.toString() ?? 'Option',
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
                 ),
               ),
             ),
-          )),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildDialogueTask() {
-    final dialogueData = _currentTask!.taskData?['dialogueData'];
+    // taskData is already the dialogueData map (see Task._getTaskData in quest_models.dart)
+    final dialogueData = _currentTask!.taskData as Map<String, dynamic>?;
+
     if (dialogueData == null) {
       return const Text(
         'No dialogue available',
@@ -412,9 +497,11 @@ class _QuestScreenState extends State<QuestScreen> {
       npcAvatar: dialogueData['npcAvatar'],
       dialogueText: dialogueData['dialogueText'] ?? 'No dialogue available',
       emotion: dialogueData['emotion'] ?? 'neutral',
-      options: (dialogueData['options'] as List<dynamic>?)
-          ?.map((option) => option as Map<String, dynamic>)
-          .toList() ?? [],
+      options:
+          (dialogueData['options'] as List<dynamic>?)
+              ?.map((o) => o as Map<String, dynamic>)
+              .toList() ??
+          [],
       onChoiceSelected: (choice, {String? nextDialogueId}) {
         _processDialogueChoice(choice, nextDialogueId);
       },
@@ -422,7 +509,9 @@ class _QuestScreenState extends State<QuestScreen> {
   }
 
   Widget _buildGeofenceTask() {
-    final geofenceData = _currentTask!.taskData?['geofenceData'];
+    final geofenceData = _currentTask!.taskData as Map<String, dynamic>?;
+    final description = geofenceData?['description'] as String?;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -432,25 +521,21 @@ class _QuestScreenState extends State<QuestScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.location_on,
-            color: Colors.white,
-            size: 48,
-          ),
+          const Icon(Icons.location_on, color: Colors.white, size: 48),
           const SizedBox(height: 16),
-          Text(
+          const Text(
             'Location Task',
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.white,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 8),
-          if (geofenceData?['description'] != null) ...[
+          if (description != null) ...[
             const SizedBox(height: 8),
             Text(
-              geofenceData['description'],
+              description,
               style: TextStyle(
                 color: Colors.white.withOpacity(0.7),
                 fontSize: 14,
@@ -463,7 +548,9 @@ class _QuestScreenState extends State<QuestScreen> {
   }
 
   Widget _buildCheckinTask() {
-    final checkinData = _currentTask!.taskData?['checkinData'];
+    final checkinData = _currentTask!.taskData as Map<String, dynamic>?;
+    final description = checkinData?['description'] as String?;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -473,25 +560,21 @@ class _QuestScreenState extends State<QuestScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.check_circle,
-            color: Colors.white,
-            size: 48,
-          ),
+          const Icon(Icons.check_circle, color: Colors.white, size: 48),
           const SizedBox(height: 16),
-          Text(
+          const Text(
             'Check-in Task',
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.white,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 8),
-          if (checkinData?['description'] != null) ...[
+          if (description != null) ...[
             const SizedBox(height: 8),
             Text(
-              checkinData['description'],
+              description,
               style: TextStyle(
                 color: Colors.white.withOpacity(0.7),
                 fontSize: 14,
@@ -503,8 +586,9 @@ class _QuestScreenState extends State<QuestScreen> {
     );
   }
 
-  Widget _buildStringInputTask() {
+  Widget _buildStringInputTask(String taskId) {
     final inputData = _currentTask!.taskData;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -515,7 +599,7 @@ class _QuestScreenState extends State<QuestScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            inputData?['question'] ?? '',
+            inputData?['question']?.toString() ?? '',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 18,
@@ -539,7 +623,12 @@ class _QuestScreenState extends State<QuestScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () => _completeTask(_currentTask!.id),
+              onPressed: _isLoading
+                  ? null
+                  : () => _completeTask(
+                      taskId,
+                      answer: {'answer': _controller.text},
+                    ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF4A148C),
                 foregroundColor: Colors.white,
@@ -552,8 +641,9 @@ class _QuestScreenState extends State<QuestScreen> {
     );
   }
 
-  Widget _buildNumberInputTask() {
+  Widget _buildNumberInputTask(String taskId) {
     final inputData = _currentTask!.taskData;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -564,7 +654,7 @@ class _QuestScreenState extends State<QuestScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            inputData?['question'] ?? '',
+            inputData?['question']?.toString() ?? '',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 18,
@@ -589,7 +679,12 @@ class _QuestScreenState extends State<QuestScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () => _completeTask(_currentTask!.id),
+              onPressed: _isLoading
+                  ? null
+                  : () => _completeTask(
+                      taskId,
+                      answer: {'answer': _controller.text},
+                    ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF4A148C),
                 foregroundColor: Colors.white,
@@ -602,8 +697,10 @@ class _QuestScreenState extends State<QuestScreen> {
     );
   }
 
-  Widget _buildTrueFalseTask() {
+  Widget _buildTrueFalseTask(String taskId) {
     final inputData = _currentTask!.taskData;
+    final question = inputData?['question']?.toString() ?? '';
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -614,7 +711,7 @@ class _QuestScreenState extends State<QuestScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            inputData?['question'] ?? '',
+            question,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 18,
@@ -626,7 +723,9 @@ class _QuestScreenState extends State<QuestScreen> {
             children: [
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () => _completeTask(_currentTask!.id),
+                  onPressed: _isLoading
+                      ? null
+                      : () => _completeTask(taskId, answer: {'answer': true}),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
@@ -637,7 +736,9 @@ class _QuestScreenState extends State<QuestScreen> {
               const SizedBox(width: 16),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () => _completeTask(_currentTask!.id),
+                  onPressed: _isLoading
+                      ? null
+                      : () => _completeTask(taskId, answer: {'answer': false}),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                     foregroundColor: Colors.white,
@@ -662,11 +763,7 @@ class _QuestScreenState extends State<QuestScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(
-            Icons.help_outline,
-            color: Colors.white,
-            size: 48,
-          ),
+          const Icon(Icons.help_outline, color: Colors.white, size: 48),
           const SizedBox(height: 16),
           const Text(
             'Task',
@@ -687,27 +784,6 @@ class _QuestScreenState extends State<QuestScreen> {
         ],
       ),
     );
-  }
-
-  String _getTaskTypeLabel(String taskType) {
-    switch (taskType) {
-      case 'multiple_choice':
-        return 'Multiple Choice';
-      case 'dialogue':
-        return 'Dialogue';
-      case 'geofence':
-        return 'Location Task';
-      case 'checkin':
-        return 'Check-in';
-      case 'number_input':
-        return 'Number Input';
-      case 'string_input':
-        return 'Text Input';
-      case 'true_false':
-        return 'True/False';
-      default:
-        return 'Task';
-    }
   }
 
   @override

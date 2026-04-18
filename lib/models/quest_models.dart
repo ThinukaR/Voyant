@@ -76,21 +76,23 @@ class Quest {
       triggerLocation: json['triggerLocation'],
       triggerRadius: json['triggerRadius'],
       npcId: json['npcId']?.toString(),
-      tasks: (json['tasks'] as List<dynamic>?)
-          ?.map((task) => Task.fromJson(task))
-          .toList() ?? [],
+      tasks:
+          (json['tasks'] as List<dynamic>?)
+              ?.map((task) => Task.fromJson(task))
+              .toList() ??
+          [],
       isActive: json['isActive'] ?? true,
       rewards: json['rewards'],
-      createdAt: json['createdAt'] != null 
-          ? DateTime.parse(json['createdAt']) 
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
           : null,
-      updatedAt: json['updatedAt'] != null 
-          ? DateTime.parse(json['updatedAt']) 
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'])
           : null,
       userStatus: json['userStatus'] ?? 'not_started',
       tasksCompleted: json['tasksCompleted'] ?? 0,
       totalTasks: json['totalTasks'] ?? 0,
-      progress: json['progress'] != null 
+      progress: json['progress'] != null
           ? QuestProgress.fromJson(json['progress'])
           : null,
     );
@@ -100,9 +102,10 @@ class Quest {
   bool get isCompleted => userStatus == 'completed';
   bool get isInProgress => userStatus == 'in_progress';
   bool get isNotStarted => userStatus == 'not_started';
-  double get progressPercentage => totalTasks > 0 ? tasksCompleted / totalTasks : 0.0;
-  
-  //type checks 
+  double get progressPercentage =>
+      totalTasks > 0 ? tasksCompleted / totalTasks : 0.0;
+
+  //type checks
   bool get isMainQuest => questType == 'main_quest';
   bool get isTripQuest => questType == 'trip_quest';
   bool get isLocationQuest => questType == 'location_quest';
@@ -110,10 +113,12 @@ class Quest {
 
   //location helpers
   bool get hasLocation => mapPosition != null || triggerLocation != null;
-  double? get latitude => 
-      mapPosition?['coordinates']?[1] ?? triggerLocation?['coordinates']?['lat'];
-  double? get longitude => 
-      mapPosition?['coordinates']?[0] ?? triggerLocation?['coordinates']?['lng'];
+  double? get latitude =>
+      mapPosition?['coordinates']?[1] ??
+      triggerLocation?['coordinates']?['lat'];
+  double? get longitude =>
+      mapPosition?['coordinates']?[0] ??
+      triggerLocation?['coordinates']?['lng'];
 }
 
 class Task {
@@ -220,27 +225,29 @@ class QuestProgress {
       questId: json['questId']?.toString() ?? '',
       questType: json['questType'] ?? '',
       status: json['status'] ?? 'not_started',
-      taskProgress: (json['taskProgress'] as List<dynamic>?)
-          ?.map((tp) => TaskProgress.fromJson(tp))
-          .toList() ?? [],
+      taskProgress:
+          (json['taskProgress'] as List<dynamic>?)
+              ?.map((tp) => TaskProgress.fromJson(tp))
+              .toList() ??
+          [],
       currentSubQuestIndex: json['currentSubQuestIndex'] ?? 0,
       subQuestProgress: (json['subQuestProgress'] as List<dynamic>?)
           ?.map((sp) => SubQuestProgress.fromJson(sp))
           .toList(),
       totalXPEarned: json['totalXPEarned'] ?? 0,
-      startedAt: json['startedAt'] != null 
-          ? DateTime.parse(json['startedAt']) 
+      startedAt: json['startedAt'] != null
+          ? DateTime.parse(json['startedAt'])
           : null,
-      completedAt: json['completedAt'] != null 
-          ? DateTime.parse(json['completedAt']) 
+      completedAt: json['completedAt'] != null
+          ? DateTime.parse(json['completedAt'])
           : null,
-      lastPlayedAt: json['lastPlayedAt'] != null 
-          ? DateTime.parse(json['lastPlayedAt']) 
+      lastPlayedAt: json['lastPlayedAt'] != null
+          ? DateTime.parse(json['lastPlayedAt'])
           : null,
     );
   }
 
-  //getters ( helper ) 
+  //getters ( helper )
   bool get isCompleted => status == 'completed';
   bool get isInProgress => status == 'in_progress';
   bool get isNotStarted => status == 'not_started';
@@ -250,7 +257,7 @@ class QuestProgress {
     return completedTasks / taskProgress.length;
   }
 
-  //getting completed task count 
+  //getting completed task count
   int get tasksCompleted => taskProgress.where((tp) => tp.isCompleted).length;
 }
 
@@ -271,8 +278,8 @@ class TaskProgress {
     return TaskProgress(
       taskId: json['taskId']?.toString() ?? '',
       isCompleted: json['isCompleted'] ?? false,
-      completedAt: json['completedAt'] != null 
-          ? DateTime.parse(json['completedAt']) 
+      completedAt: json['completedAt'] != null
+          ? DateTime.parse(json['completedAt'])
           : null,
       xpAwarded: json['xpAwarded'] ?? 0,
     );
@@ -303,10 +310,13 @@ class SubQuestProgress {
       subQuestId: json['subQuestId']?.toString() ?? '',
       status: json['status'] ?? 'locked',
       currentDialogueNodeId: json['currentDialogueNodeId'],
-      completedDialogueNodes: json['completedDialogueNodes']?.cast<String>() ?? [],
-      userChoices: (json['userChoices'] as List<dynamic>?)
-          ?.map((choice) => UserChoice.fromJson(choice))
-          .toList() ?? [],
+      completedDialogueNodes:
+          json['completedDialogueNodes']?.cast<String>() ?? [],
+      userChoices:
+          (json['userChoices'] as List<dynamic>?)
+              ?.map((choice) => UserChoice.fromJson(choice))
+              .toList() ??
+          [],
       flags: json['flags']?.cast<String>() ?? [],
       xpEarned: json['xpEarned'] ?? 0,
     );
@@ -352,22 +362,29 @@ class QuestListResponse {
   });
 
   factory QuestListResponse.fromJson(Map<String, dynamic> json) {
-  
     final questsData = json['quests'] ?? json;
-    
+
     return QuestListResponse(
-      mainQuests: (questsData['main_quests'] as List<dynamic>?)
-          ?.map((quest) => Quest.fromJson(quest))
-          .toList() ?? [],
-      tripQuests: (questsData['trip_quests'] as List<dynamic>?)
-          ?.map((quest) => Quest.fromJson(quest))
-          .toList() ?? [],
-      locationQuests: (questsData['location_quests'] as List<dynamic>?)
-          ?.map((quest) => Quest.fromJson(quest))
-          .toList() ?? [],
-      npcQuests: (questsData['npc_quests'] as List<dynamic>?)
-          ?.map((quest) => Quest.fromJson(quest))
-          .toList() ?? [],
+      mainQuests:
+          (questsData['main_quests'] as List<dynamic>?)
+              ?.map((quest) => Quest.fromJson(quest))
+              .toList() ??
+          [],
+      tripQuests:
+          (questsData['trip_quests'] as List<dynamic>?)
+              ?.map((quest) => Quest.fromJson(quest))
+              .toList() ??
+          [],
+      locationQuests:
+          (questsData['location_quests'] as List<dynamic>?)
+              ?.map((quest) => Quest.fromJson(quest))
+              .toList() ??
+          [],
+      npcQuests:
+          (questsData['npc_quests'] as List<dynamic>?)
+              ?.map((quest) => Quest.fromJson(quest))
+              .toList() ??
+          [],
       trips: json['trips']?.cast<dynamic>() ?? [],
     );
   }

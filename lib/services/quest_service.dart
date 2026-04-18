@@ -15,9 +15,7 @@ class QuestService {
 
   //getting auth headers
   Map<String, String> _getHeaders() {
-    return {
-      'Content-Type': 'application/json',
-    };
+    return {'Content-Type': 'application/json'};
   }
 
   //auth token
@@ -29,7 +27,7 @@ class QuestService {
     return null;
   }
 
-  //getting all quests 
+  //getting all quests
   Future<QuestListResponse> getAllUserQuests() async {
     try {
       final token = await _getToken();
@@ -37,10 +35,7 @@ class QuestService {
 
       final response = await http.get(
         Uri.parse('${ApiConfig.baseUrl}/quests'),
-        headers: {
-          ..._getHeaders(),
-          'Authorization': 'Bearer $token',
-        },
+        headers: {..._getHeaders(), 'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
@@ -62,10 +57,7 @@ class QuestService {
 
       final response = await http.get(
         Uri.parse('${ApiConfig.baseUrl}/quests/$questId'),
-        headers: {
-          ..._getHeaders(),
-          'Authorization': 'Bearer $token',
-        },
+        headers: {..._getHeaders(), 'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
@@ -87,10 +79,7 @@ class QuestService {
 
       final response = await http.post(
         Uri.parse('${ApiConfig.baseUrl}/quests/$questId/start'),
-        headers: {
-          ..._getHeaders(),
-          'Authorization': 'Bearer $token',
-        },
+        headers: {..._getHeaders(), 'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 201) {
@@ -104,30 +93,48 @@ class QuestService {
     }
   }
 
-  //task completion 
+  //task completion
   Future<Map<String, dynamic>> completeTask(
-    String questId, 
-    String taskId, 
-    Map<String, dynamic> answer
+    String questId,
+    String taskId,
+    Map<String, dynamic> answer,
   ) async {
     try {
       final token = await _getToken();
       if (token == null) throw Exception('User not authenticated');
 
       final response = await http.post(
-        Uri.parse('${ApiConfig.baseUrl}/quests/$questId/tasks/$taskId/complete'),
-        headers: {
-          ..._getHeaders(),
-          'Authorization': 'Bearer $token',
-        },
+        Uri.parse(
+          '${ApiConfig.baseUrl}/quests/$questId/tasks/$taskId/complete',
+        ),
+        headers: {..._getHeaders(), 'Authorization': 'Bearer $token'},
         body: json.encode(answer),
       );
 
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      } else {
-        throw Exception('Failed to complete task: ${response.body}');
+      // Always try to parse JSON for expected responses
+      Map<String, dynamic> body;
+      try {
+        body = json.decode(response.body) as Map<String, dynamic>;
+      } catch (_) {
+        body = {'message': response.body};
       }
+
+      if (response.statusCode == 200) {
+        return body; // {passed:true,...}
+      }
+
+      // Wrong answer / validation failures should NOT throw (so UI can show banner)
+      if (response.statusCode == 400) {
+        return {
+          'passed': false,
+          'reason': body['message'] ?? 'Wrong answer, try again',
+        };
+      }
+
+      // Everything else is a real error
+      throw Exception(
+        'Failed to complete task: ${response.statusCode} ${response.body}',
+      );
     } catch (e) {
       throw Exception('Error completing task: $e');
     }
@@ -141,10 +148,7 @@ class QuestService {
 
       final response = await http.get(
         Uri.parse('${ApiConfig.baseUrl}/quests/$questId/dialogue'),
-        headers: {
-          ..._getHeaders(),
-          'Authorization': 'Bearer $token',
-        },
+        headers: {..._getHeaders(), 'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
@@ -159,9 +163,9 @@ class QuestService {
 
   //handling dialogue choice
   Future<Map<String, dynamic>> processDialogueChoice(
-    String questId, 
-    String choice, 
-    String? nextDialogueId
+    String questId,
+    String choice,
+    String? nextDialogueId,
   ) async {
     try {
       final token = await _getToken();
@@ -169,14 +173,8 @@ class QuestService {
 
       final response = await http.post(
         Uri.parse('${ApiConfig.baseUrl}/quests/$questId/dialogue'),
-        headers: {
-          ..._getHeaders(),
-          'Authorization': 'Bearer $token',
-        },
-        body: json.encode({
-          'choice': choice,
-          'nextDialogueId': nextDialogueId,
-        }),
+        headers: {..._getHeaders(), 'Authorization': 'Bearer $token'},
+        body: json.encode({'choice': choice, 'nextDialogueId': nextDialogueId}),
       );
 
       if (response.statusCode == 200) {
@@ -191,10 +189,10 @@ class QuestService {
 
   //location trigger check ( for triggers that will be close by)
   Future<Map<String, dynamic>> checkNearbyTriggers(
-    double latitude, 
-    double longitude, 
-    {int radius = 100}
-  ) async {
+    double latitude,
+    double longitude, {
+    int radius = 100,
+  }) async {
     try {
       final token = await _getToken();
       if (token == null) throw Exception('User not authenticated');
@@ -203,17 +201,15 @@ class QuestService {
       if (user == null) throw Exception('User not authenticated');
 
       final response = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/quests/triggers/nearby')
-            .replace(queryParameters: {
-              'userId': user.uid,
-              'lat': latitude.toString(),
-              'lng': longitude.toString(),
-              'radius': radius.toString(),
-            }),
-        headers: {
-          ..._getHeaders(),
-          'Authorization': 'Bearer $token',
-        },
+        Uri.parse('${ApiConfig.baseUrl}/quests/triggers/nearby').replace(
+          queryParameters: {
+            'userId': user.uid,
+            'lat': latitude.toString(),
+            'lng': longitude.toString(),
+            'radius': radius.toString(),
+          },
+        ),
+        headers: {..._getHeaders(), 'Authorization': 'Bearer $token'},
       );
 
       if (response.statusCode == 200) {
@@ -226,12 +222,9 @@ class QuestService {
     }
   }
 
-
-  //starting the galle main quest 
+  //starting the galle main quest
   Future<QuestProgress> startGalleMainQuest() async {
     try {
-      
-
       final questResponse = await getAllUserQuests();
       final galleQuest = questResponse.mainQuests.firstWhere(
         (quest) => quest.title.toLowerCase().contains('galle'),
@@ -244,7 +237,7 @@ class QuestService {
     }
   }
 
-  //getting specific quest 
+  //getting specific quest
   Future<List<Quest>> getQuestsForTrip(String tripId) async {
     try {
       final questResponse = await getAllUserQuests();
@@ -256,7 +249,7 @@ class QuestService {
     }
   }
 
-  //getting all location based quests 
+  //getting all location based quests
   Future<List<Quest>> getAvailableLocationQuests() async {
     try {
       final questResponse = await getAllUserQuests();
@@ -268,7 +261,7 @@ class QuestService {
     }
   }
 
-  //conditional check for if the user can start the quest or not 
+  //conditional check for if the user can start the quest or not
   bool canStartQuest(Quest quest, List<Quest> allQuests) {
     if (quest.prerequisites == null || quest.prerequisites!.isEmpty) {
       return true;
@@ -276,10 +269,8 @@ class QuestService {
 
     //check - to see if all prerequisite quests are completed
     for (final prereqId in quest.prerequisites!) {
-      final prereqQuest = allQuests
-          .where((q) => q.id == prereqId)
-          .firstOrNull;
-      
+      final prereqQuest = allQuests.where((q) => q.id == prereqId).firstOrNull;
+
       if (prereqQuest == null || !prereqQuest.isCompleted) {
         return false;
       }
@@ -288,28 +279,51 @@ class QuestService {
     return true;
   }
 
-  //getting next uncompleted task for quests 
+  //getting next uncompleted task for quests
   Task? getNextTask(Quest quest) {
     if (quest.tasks.isEmpty) return null;
-    
-    //finding the first incopmplete task 
+
+    //finding the first incopmplete task
     for (final task in quest.tasks) {
       if (!task.isCompleted) {
         return task;
       }
     }
-    
+
     return null;
   }
 
   //calclating quest progress ( by percentage )
   double calculateProgress(Quest quest) {
     if (quest.tasks.isEmpty) return 0.0;
-    
-    final completedTasks = quest.tasks
-        .where((task) => task.isCompleted)
-        .length;
-    
+
+    final completedTasks = quest.tasks.where((task) => task.isCompleted).length;
+
     return completedTasks / quest.tasks.length;
+  }
+
+  // Fetch ONLY the user's progress for a quest (from GET /quests/:id response)
+  Future<QuestProgress?> getQuestProgress(String questId) async {
+    try {
+      final token = await _getToken();
+      if (token == null) throw Exception('User not authenticated');
+
+      final response = await http.get(
+        Uri.parse('${ApiConfig.baseUrl}/quests/$questId'),
+        headers: {..._getHeaders(), 'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to load quest: ${response.body}');
+      }
+
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      final progressJson = data['progress'];
+
+      if (progressJson == null) return null;
+      return QuestProgress.fromJson(progressJson as Map<String, dynamic>);
+    } catch (e) {
+      throw Exception('Error loading quest progress: $e');
+    }
   }
 }

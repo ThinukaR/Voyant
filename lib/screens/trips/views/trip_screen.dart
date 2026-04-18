@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:voyant/screens/quest/views/quests_list_screen.dart';
+import 'package:voyant/screens/quest/views/quest_list_screen.dart';
 import 'package:voyant/widgets/animated_gradient_background.dart';
 
 class TripDetailScreen extends StatefulWidget {
@@ -36,10 +36,10 @@ class _TripDetailScreenState extends State<TripDetailScreen> {
 
   Future<void> _loadTripData() async {
     try {
-      final token = await _getToken();
+      await _getToken();
       final response = await http.get(
         Uri.parse('$baseUrl/quests/trip/${widget.tripId}'),
-        headers: {'Authorization': 'Bearer $token'},
+        headers: {'Authorization': '******'},
       );
 
       if (response.statusCode == 200) {

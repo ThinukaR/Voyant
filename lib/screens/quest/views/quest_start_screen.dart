@@ -35,25 +35,21 @@ class _QuestStartScreenState extends State<QuestStartScreen>
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
-    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+          CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+        );
 
     _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.elasticOut),
     );
 
-  
     _animationController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         //navigates after animation finishes
         Future.delayed(const Duration(seconds: 1), () {
           if (mounted) {
             widget.onQuestStarted?.call();
-            Navigator.of(context).pop();
           }
         });
       }
@@ -119,11 +115,7 @@ class _QuestStartScreenState extends State<QuestStartScreen>
                       width: 2,
                     ),
                   ),
-                  child: const Icon(
-                    Icons.flag,
-                    size: 60,
-                    color: Colors.white,
-                  ),
+                  child: const Icon(Icons.flag, size: 60, color: Colors.white),
                 ),
               ),
             ),
@@ -185,10 +177,7 @@ class _QuestStartScreenState extends State<QuestStartScreen>
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              icon: const Icon(
-                Icons.arrow_forward,
-                color: Color(0xFF4C1D95),
-              ),
+              icon: const Icon(Icons.arrow_forward, color: Color(0xFF4C1D95)),
               label: const Text(
                 'Continue',
                 style: TextStyle(
