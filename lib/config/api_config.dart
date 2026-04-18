@@ -1,8 +1,9 @@
 class ApiConfig {
-  static const String _baseUrl = 'https://api-cbmysz2x4a-uc.a.run.app/api';
+  // TODO: Update this URL after deploying to Render
+  static const String _baseUrl = 'https://voyant-backend.onrender.com/api';
   
   static String get baseUrl {
-    //using emulator url
-    return 'https://api-cbmysz2x4a-uc.a.run.app/api';
+    // Render backend URL - update with your actual Render URL
+    return 'https://voyant-backend.onrender.com/api';
   }
 }
