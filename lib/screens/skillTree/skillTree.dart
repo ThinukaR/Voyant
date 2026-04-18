@@ -209,21 +209,38 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
           Uri.parse('$baseUrl/user-skills/my-skills'),
           headers: {'Authorization': 'Bearer $token'},
         );
-        final List<dynamic> unlockedData = unlockedResponse.statusCode == 200
-            ? jsonDecode(unlockedResponse.body)
-            : [];
-        final unlockedIds = unlockedData
-            .map((us) => us['skillId']?['_id']?.toString() ?? '')
-            .toSet();
+        
+        Set<String> unlockedIds = {};
+        if (unlockedResponse.statusCode == 200) {
+          final List<dynamic> unlockedData = jsonDecode(unlockedResponse.body);
+          unlockedIds = unlockedData
+              .map((us) {
+                // Handle both nested object and direct ID formats
+                final skillId = us['skillId'];
+                if (skillId is Map) {
+                  return skillId['_id']?.toString() ?? '';
+                } else {
+                  return skillId?.toString() ?? '';
+                }
+              })
+              .where((id) => id.isNotEmpty)
+              .toSet();
+          debugPrint('[SKILLS] Loaded ${unlockedIds.length} unlocked skills: $unlockedIds');
+        }
 
         final loadedNodes = data.map((skill) {
-          final isUnlocked = unlockedIds.contains(skill['_id'].toString());
+          final skillId = skill['_id'].toString();
+          final isUnlocked = unlockedIds.contains(skillId);
           final tier = skill['tier'] ?? 1;
+          
           final initialState = isUnlocked
               ? NodeState.unlocked
               : (tier == 1 ? NodeState.available : NodeState.locked);
+          
+          debugPrint('[SKILL] ${skill['label'] ?? skill['name']}: tier=$tier, unlocked=$isUnlocked, state=$initialState');
+          
           return SkillNode(
-            id: skill['_id'].toString(),
+            id: skillId,
             label: skill['label'] ?? skill['name'] ?? '',
             description: skill['description'] ?? '',
             icon: _stringToIcon(skill['icon'] ?? 'stars_rounded'),
@@ -238,7 +255,10 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
           _nodes = loadedNodes;
           isLoading = false;
         });
+        
+        // Recalculate only AFTER setting the new nodes
         _recalc();
+        debugPrint('[SKILLS] Loaded ${_nodes.length} total skills');
       } else {
         setState(() {
           error = 'Failed to load skills: ${response.statusCode}';
@@ -273,7 +293,11 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
 
   void _recalc() {
     for (final n in _nodes) {
-      if (n.state == NodeState.unlocked) continue;
+      // Never downgrade an unlocked skill
+      if (n.state == NodeState.unlocked) {
+        debugPrint('[RECALC] Keeping ${n.label} as unlocked');
+        continue;
+      }
       if (n.tier == 1) {
         n.state = NodeState.available;
       } else if (n.tier == 2) {
@@ -302,7 +326,10 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
   }
 
   void _onNodeTap(SkillNode node) async {
+    debugPrint('[TAP] Tapped skill: ${node.label}, state: ${node.state}, unlocked: ${node.state == NodeState.unlocked}');
+    
     if (node.state == NodeState.unlocked) {
+      debugPrint('[TAP] Showing info for already-unlocked skill: ${node.label}');
       _showInfo(node);
       return;
     }
