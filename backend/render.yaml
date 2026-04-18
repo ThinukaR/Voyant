@@ -6,8 +6,7 @@ services:
     startCommand: npm start
     envVars:
       - key: MONGO_URI
-        scope: build
-        sync: false
+        scope: runtime
       - key: PORT
         value: 3000
 

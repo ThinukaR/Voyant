@@ -6,12 +6,14 @@ console.log('Environment variables loaded:');
 console.log('MONGO_URI:', process.env.MONGO_URI ? 'SET' : 'NOT SET');
 console.log('PORT:', process.env.PORT ? 'SET' : 'NOT SET');
 
-if (!process.env.MONGO_URI) {
-  throw new Error("MONGO_URI missing. Set it in backend/.env file");
-}
+// Set defaults if not provided (for Render and production)
+const MONGO_URI = process.env.MONGO_URI;
+const PORT = process.env.PORT || 3000;
 
-if (!process.env.PORT) {
-  throw new Error("PORT missing. Set it in backend/.env file or use default 3000");
+if (!MONGO_URI) {
+  console.error("ERROR: MONGO_URI environment variable is not set");
+  console.error("Please set MONGO_URI in Render dashboard environment variables");
+  process.exit(1);
 }
 // Imports
 require("./firebase/firebaseAdmin");
@@ -30,7 +32,6 @@ const userRewardRoutes = require("./routes/userRewardRoutes");
 const messageLogRoutes = require("./routes/messageLogRoutes");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // Routes
 app.use(express.json());
@@ -43,7 +44,7 @@ app.get('/health', (req, res) => {
 app.use("/api/user-account-details", userAccountDetailsRoutes);
 app.use("/api/avatars", avatarRoutes);
 app.use("/api/destinations", destinationRoutes);
-app.use("/api/quests", questRoutes); 
+app.use("/api/quests", questRoutes);
 app.use("/api/skills", skillRoutes);
 app.use("/api/user-groups", userGroupRoutes);
 app.use("/api/user-skills", userSkillRoutes);
@@ -52,11 +53,16 @@ app.use("/api/rewards", userRewardRoutes);
 app.use("/api/messages", messageLogRoutes);
 
 async function startApp() {
-  await connectToDatabase();
+  try {
+    await connectToDatabase();
 
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error("Failed to start app:", error);
+    process.exit(1);
+  }
 }
 
 startApp();
