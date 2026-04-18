@@ -47,7 +47,8 @@ class SkillTreeScreen extends StatefulWidget {
 class _SkillTreeScreenState extends State<SkillTreeScreen>
     with SingleTickerProviderStateMixin {
   // ── API ────────────────────────────────────────────────────
-  static const String baseUrl = 'https://api-cbmysz2x4a-uc.a.run.app/api';
+  // Using Render backend - update if you have a custom domain
+  static const String baseUrl = 'https://voyant-backend.onrender.com/api';
 
   // ── State ──────────────────────────────────────────────────
   int _skillPoints = 0;
