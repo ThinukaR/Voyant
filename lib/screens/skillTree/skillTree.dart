@@ -48,7 +48,7 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
     with SingleTickerProviderStateMixin {
   // ── API ────────────────────────────────────────────────────
   // Using Render backend - update if you have a custom domain
-  static const String baseUrl = 'https://voyant-backend.onrender.com/api';
+  static const String baseUrl = 'https://voyant-0f9w.onrender.com/api';
 
   // ── State ──────────────────────────────────────────────────
   int _skillPoints = 0;
@@ -1123,10 +1123,19 @@ class _NodeBubble extends StatelessWidget {
               ),
               boxShadow: unlocked
                   ? [
+                      // Inner glow
                       BoxShadow(
-                        color: nc.withValues(alpha: 0.3),
-                        blurRadius: 16,
-                        spreadRadius: 1,
+                        color: nc.withValues(alpha: 0.5),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 0),
+                      ),
+                      // Outer glow
+                      BoxShadow(
+                        color: nc.withValues(alpha: 0.25),
+                        blurRadius: 20,
+                        spreadRadius: 3,
+                        offset: const Offset(0, 0),
                       ),
                     ]
                   : [],
