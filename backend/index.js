@@ -100,17 +100,34 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Route not found', path: req.path });
 });
 
-// For local development
-if (process.env.NODE_ENV !== 'production') {
-  async function startApp() {
+async function startApp() {
+  try {
+    console.log("[STARTUP] Connecting to database...");
+    await connectToDatabase();
+    console.log("[STARTUP] ✓ Database connection successful");
 
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+    console.log("[STARTUP] Starting Express server on port", PORT);
+    const server = app.listen(PORT, () => {
+      console.log(`[STARTUP] ✓ Server running on port ${PORT}`);
     });
-  }
 
-  startApp();
+    // Graceful shutdown
+    process.on('SIGTERM', () => {
+      console.log('[SHUTDOWN] SIGTERM received, shutting down gracefully...');
+      server.close(() => {
+        console.log('[SHUTDOWN] Server closed');
+        process.exit(0);
+      });
+    });
+
+  } catch (err) {
+    console.error("[ERROR] Failed to start server:", err.message);
+    console.error("[ERROR] Stack trace:", err.stack);
+    process.exit(1);
+  }
 }
+
+startApp();
 
 // Export for Vercel serverless functions
 module.exports = app;
