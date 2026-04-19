@@ -19,6 +19,10 @@ if (!process.env.MONGO_URI) {
   throw new Error("MONGO_URI missing. Set it in environment variables");
 }
 
+// Set defaults if not provided
+const MONGO_URI = process.env.MONGO_URI;
+const PORT = process.env.PORT || 3000;
+
 // Imports
 require("./firebase/firebaseAdmin");
 
