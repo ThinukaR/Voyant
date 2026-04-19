@@ -53,16 +53,40 @@ class _CosmeticScreenState extends State<CosmeticScreen> {
         headers: headers,
       );
 
+      debugPrint('Avatar status: ${avatarRes.statusCode}');
+      debugPrint('Avatar body: ${avatarRes.body}');
+      debugPrint('Items status: ${itemsRes.statusCode}');
+      debugPrint('Items body: ${itemsRes.body}');
+      if (itemsRes.statusCode == 200) {
+        debugPrint('Items count: ${jsonDecode(itemsRes.body).length}');
+      }
+
       if (mounted) {
-        if (avatarRes.statusCode == 200 && itemsRes.statusCode == 200) {
+        if (itemsRes.statusCode == 200) {
+          final decodedItems = jsonDecode(itemsRes.body);
+          debugPrint('Decoded items: $decodedItems');
+          setState(() {
+            allItems = decodedItems;
+          });
+          debugPrint('State updated. allItems length: ${allItems.length}');
+          debugPrint('Category items for $selectedCategory: ${_categoryItems.length}');
+        } else {
+          debugPrint('Failed to load cosmetics items: ${itemsRes.statusCode}');
+        }
+
+        // Load avatar separately - it might fail initially but items should still display
+        if (avatarRes.statusCode == 200) {
           setState(() {
             avatar = jsonDecode(avatarRes.body);
-            allItems = jsonDecode(itemsRes.body);
           });
+          debugPrint('Avatar loaded successfully');
         } else {
-          debugPrint(
-            'Failed to load cosmetics data: ${avatarRes.statusCode}, ${itemsRes.statusCode}',
-          );
+          debugPrint('Failed to load avatar: ${avatarRes.statusCode}');
+          debugPrint('This is expected for new users - avatar will be created on next refresh');
+          // Still display items even if avatar fails
+          setState(() {
+            avatar = null;
+          });
         }
       }
     } catch (e) {
@@ -553,7 +577,15 @@ class _CosmeticScreenState extends State<CosmeticScreen> {
 
     final ownedIds =
         (avatar?['ownedItems'] as List<dynamic>?)
-            ?.map((i) => i['_id'].toString())
+            ?.map((i) {
+              // Handle both string IDs and object structures
+              if (i is String) {
+                return i;
+              } else if (i is Map) {
+                return i['_id'].toString();
+              }
+              return '';
+            })
             .toSet() ??
         {};
 
