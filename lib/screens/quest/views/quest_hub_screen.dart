@@ -8,10 +8,7 @@ import '../../../../widgets/animated_gradient_background.dart';
 class QuestHubScreen extends StatefulWidget {
   final String userId;
 
-  const QuestHubScreen({
-    super.key,
-    required this.userId,
-  });
+  const QuestHubScreen({super.key, required this.userId});
 
   @override
   State<QuestHubScreen> createState() => _QuestHubScreenState();
@@ -40,7 +37,7 @@ class _QuestHubScreenState extends State<QuestHubScreen> {
       });
 
       final questResponse = await QuestService().getAllUserQuests();
-      
+
       setState(() {
         _mainQuests = questResponse.mainQuests;
         _tripQuests = questResponse.tripQuests;
@@ -56,52 +53,32 @@ class _QuestHubScreenState extends State<QuestHubScreen> {
       });
     }
   }
-  
+
   Future<void> _startQuest(Quest quest) async {
     try {
-      //quest start animation 
-      showModalBottomSheet(
+      final confirmed = await showModalBottomSheet<bool>(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
-        builder: (context) => QuestStartScreen(
-          questTitle: quest.title,
-          questId: quest.id,
-          onQuestStarted: () async {
+        builder: (_) =>
+            QuestStartScreen(questTitle: quest.title, questId: quest.id),
+      );
 
-            //quest starts after animation 
-            try {
-              final progress = await QuestService().startQuest(quest.id);
-              
-              //navigating to quest screen 
-              if (context.mounted) {
-                Navigator.of(context).pop(); 
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => QuestScreen(
-                      quest: quest,
-                      initialProgress: progress,
-                    ),
-                  ),
-                );
-              }
-            } catch (e) {
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error starting quest: ${e.toString()}'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            }
-          },
+      if (confirmed != true) return;
+
+      final progress = await QuestService().startQuest(quest.id);
+
+      if (!mounted) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => QuestScreen(quest: quest, initialProgress: progress),
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error starting quest: ${e.toString()}'),
+          content: Text('Error starting quest: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -111,9 +88,8 @@ class _QuestHubScreenState extends State<QuestHubScreen> {
   void _resumeQuest(Quest quest) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => QuestScreen(
-          quest: quest,
-        ),
+        builder: (context) =>
+            QuestScreen(quest: quest, initialProgress: quest.progress),
       ),
     );
   }
@@ -128,10 +104,7 @@ class _QuestHubScreenState extends State<QuestHubScreen> {
           elevation: 0,
           title: const Text(
             'Quest Hub',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
           ),
         ),
         body: _isLoading
@@ -141,168 +114,162 @@ class _QuestHubScreenState extends State<QuestHubScreen> {
                 ),
               )
             : _error != null
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.error_outline,
-                          size: 64,
-                          color: Colors.white70,
-                        ),
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Error loading quests',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 18,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _error!,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Colors.white54,
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton(
-                          onPressed: _loadAvailableQuests,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF4A148C),
-                            foregroundColor: Colors.white,
-                          ),
-                          child: const Text('Retry'),
-                        ),
-                      ],
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Colors.white70,
                     ),
-                  )
-                : SingleChildScrollView(
-                    child: Column(
-                      children: [
-
-                        //main quest selection 
-
-                        if (_mainQuests.isNotEmpty) ...[
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Main Quests',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                for (final quest in _mainQuests) 
-                                  _buildQuestCard(quest, null),
-                              ],
-                            ),
-                          ),
-                        ],
-                        
-                        //trip quests 
-                        if (_tripQuests.isNotEmpty) ...[
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Trip Quests',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                for (final quest in _tripQuests) 
-                                  _buildQuestCard(quest, null),
-                              ],
-                            ),
-                          ),
-                        ],
-                        
-                        //location uests 
-                        if (_locationQuests.isNotEmpty) ...[
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Location Quests',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                for (final quest in _locationQuests) 
-                                  _buildQuestCard(quest, null),
-                              ],
-                            ),
-                          ),
-                        ],
-                        
-                        //NPC quests 
-                        if (_npcQuests.isNotEmpty) ...[
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'NPC Quests',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                for (final quest in _npcQuests) 
-                                  _buildQuestCard(quest, null),
-                              ],
-                            ),
-                          ),
-                        ],
-                        
-                        
-                        if (_mainQuests.isEmpty && 
-                            _tripQuests.isEmpty && 
-                            _locationQuests.isEmpty && 
-                            _npcQuests.isEmpty)
-                          const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(32),
-                              child: Text(
-                                'No quests available',
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 16,
-                                ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Error loading quests',
+                      style: TextStyle(color: Colors.white70, fontSize: 18),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _error!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: _loadAvailableQuests,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4A148C),
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              )
+            : SingleChildScrollView(
+                child: Column(
+                  children: [
+                    //main quest selection
+                    if (_mainQuests.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Main Quests',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
+                            const SizedBox(height: 8),
+                            for (final quest in _mainQuests)
+                              _buildQuestCard(quest, null),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    //trip quests
+                    if (_tripQuests.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Trip Quests',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            for (final quest in _tripQuests)
+                              _buildQuestCard(quest, null),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    //location uests
+                    if (_locationQuests.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Location Quests',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            for (final quest in _locationQuests)
+                              _buildQuestCard(quest, quest.progress),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    //NPC quests
+                    if (_npcQuests.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'NPC Quests',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            for (final quest in _npcQuests)
+                              _buildQuestCard(quest, quest.progress),
+                          ],
+                        ),
+                      ),
+                    ],
+
+                    if (_mainQuests.isEmpty &&
+                        _tripQuests.isEmpty &&
+                        _locationQuests.isEmpty &&
+                        _npcQuests.isEmpty)
+                      const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(32),
+                          child: Text(
+                            'No quests available',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 16,
+                            ),
                           ),
-                      ],
-                    ),
-                  ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
       ),
     );
   }
 
   Widget _buildQuestCard(Quest quest, QuestProgress? progress) {
-    final isInProgress = progress?.status == 'in_progress';
-    final isCompleted = progress?.status == 'completed';
+    final isInProgress = quest.userStatus == 'in_progress';
+    final isCompleted = quest.userStatus == 'completed';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -335,9 +302,9 @@ class _QuestHubScreenState extends State<QuestHubScreen> {
                     size: 30,
                   ),
                 ),
-                
+
                 const SizedBox(width: 16),
-                
+
                 //quest info
                 Expanded(
                   child: Column(
@@ -395,7 +362,7 @@ class _QuestHubScreenState extends State<QuestHubScreen> {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      
+
                       //Progress and XP
                       Row(
                         children: [
@@ -428,9 +395,9 @@ class _QuestHubScreenState extends State<QuestHubScreen> {
                 ),
               ],
             ),
-            
+
             const SizedBox(height: 16),
-            
+
             //For progress and actions
             Row(
               children: [
@@ -449,18 +416,25 @@ class _QuestHubScreenState extends State<QuestHubScreen> {
                         ),
                         const SizedBox(height: 4),
                         LinearProgressIndicator(
-                          value: (progress?.tasksCompleted ?? 0) / quest.tasks.length,
+                          value:
+                              (progress?.tasksCompleted ?? 0) /
+                              quest.tasks.length,
                           backgroundColor: Colors.white.withOpacity(0.2),
-                          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF4A148C)),
+                          valueColor: const AlwaysStoppedAnimation<Color>(
+                            Color(0xFF4A148C),
+                          ),
                         ),
                       ],
                     ),
                   ),
-                
+
                 //completed status
                 if (isCompleted)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.green.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(8),
@@ -478,7 +452,7 @@ class _QuestHubScreenState extends State<QuestHubScreen> {
                 else
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: isInProgress 
+                      onPressed: isInProgress
                           ? () => _resumeQuest(quest)
                           : () => _startQuest(quest),
                       style: ElevatedButton.styleFrom(

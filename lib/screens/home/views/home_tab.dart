@@ -7,8 +7,7 @@ import 'package:voyant/screens/referral_system/refer_screen.dart';
 import 'package:voyant/screens/settings/settings_screen.dart';
 import 'package:voyant/widgets/animated_gradient_background.dart';
 import 'package:voyant/screens/profile/views/profile_screen.dart';
-
-
+import 'package:voyant/config/api_config.dart';
 
 class HomeTab extends StatefulWidget {
   final VoidCallback onTripsTap;
@@ -19,7 +18,7 @@ class HomeTab extends StatefulWidget {
 }
 
 class _HomeTabState extends State<HomeTab> {
-  static const String baseUrl = 'https://api-cbmysz2x4a-uc.a.run.app/api';
+  static const String baseUrl = 'https://voyant-0f9w.onrender.com/api';
 
   Map<String, dynamic>? stats;
   bool isLoading = true;
@@ -38,7 +37,7 @@ class _HomeTabState extends State<HomeTab> {
     try {
       final token = await _getToken();
       final response = await http.get(
-        Uri.parse('$baseUrl/stats/home'),
+        Uri.parse('${baseUrl}/stats/home'),
         headers: {'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
@@ -128,7 +127,10 @@ class _HomeTabState extends State<HomeTab> {
                         Row(
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.card_giftcard, color: Color(0xFFB020DD)),
+                              icon: const Icon(
+                                Icons.card_giftcard,
+                                color: Color(0xFFB020DD),
+                              ),
                               onPressed: () {
                                 Navigator.push(
                                   context,
@@ -139,7 +141,10 @@ class _HomeTabState extends State<HomeTab> {
                               },
                             ),
                             IconButton(
-                              icon: const Icon(Icons.settings, color: Color(0xFFB020DD)),
+                              icon: const Icon(
+                                Icons.settings,
+                                color: Color(0xFFB020DD),
+                              ),
                               onPressed: () {
                                 Navigator.push(
                                   context,
@@ -150,32 +155,35 @@ class _HomeTabState extends State<HomeTab> {
                               },
                             ),
                             // profile icon — tap to go to profile page
-                        GestureDetector(
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ProfileScreen(),
-                            ),
-                          ),
-                          child: Container(
+                            GestureDetector(
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ProfileScreen(),
+                                ),
+                              ),
+                              child: Container(
                                 width: 50,
                                 height: 50,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   gradient: const LinearGradient(
-                                    colors: [Color(0xFFB020DD), Color(0xFF551161)],
+                                    colors: [
+                                      Color(0xFFB020DD),
+                                      Color(0xFF551161),
+                                    ],
                                   ),
                                   border: Border.all(
                                     color: const Color(0xFFB020DD),
-                                width: 2,
-                              ),
+                                    width: 2,
+                                  ),
                                 ),
                                 child: const Icon(
-                              Icons.person,
+                                  Icons.person,
                                   color: Colors.white,
-                              size: 30,
-                            ),
-                          ),
+                                  size: 30,
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -418,14 +426,18 @@ class _HomeTabState extends State<HomeTab> {
         children: [
           Icon(icon, color: color, size: 24),
           const SizedBox(height: 8),
-          Text(value,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold)),
-          Text(label,
-              style:
-                  TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+          ),
         ],
       ),
     );

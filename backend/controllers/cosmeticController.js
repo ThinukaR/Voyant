@@ -13,17 +13,30 @@ exports.getAvatar = async (req, res) => {
 
     if (!avatar) {
       const defaultItems = await CosmeticItem.find({ xpCost: 0 });
-      avatar = await UserAvatar.create({
-        userId: req.userId,
-        ownedItems: defaultItems.map((i) => i._id),
-      });
-      avatar = await UserAvatar.findOne({ userId: req.userId })
-        .populate("equipped.hat")
-        .populate("equipped.hair")
-        .populate("equipped.shirt")
-        .populate("equipped.pants")
-        .populate("equipped.shoes")
-        .populate("ownedItems");
+      try {
+        avatar = await UserAvatar.create({
+          userId: req.userId,
+          ownedItems: defaultItems.map((i) => i._id),
+        });
+      } catch (createErr) {
+        // If duplicate key error (E11000), user already exists, fetch it again
+        if (createErr.code === 11000) {
+          avatar = await UserAvatar.findOne({ userId: req.userId })
+            .populate("equipped.hat")
+            .populate("equipped.hair")
+            .populate("equipped.shirt")
+            .populate("equipped.pants")
+            .populate("equipped.shoes")
+            .populate("ownedItems");
+        } else {
+          throw createErr;
+        }
+      }
+
+      // If still no avatar, return error
+      if (!avatar) {
+        return res.status(404).json({ message: "Could not create or retrieve avatar" });
+      }
     }
 
     return res.json(avatar);

@@ -32,19 +32,14 @@ class _MapState extends State<Map> {
         markerId: const MarkerId('colombo'),
         position: const LatLng(6.9271, 79.8612),
         infoWindow: const InfoWindow(title: ''),
-        onTap: () => _showCustomInfoWindow(
-          'Colombo',
-          'Capital of Sri Lanka',
-        ),
+        onTap: () => _showCustomInfoWindow('Colombo', 'Capital of Sri Lanka'),
       ),
       Marker(
         markerId: const MarkerId('kandy'),
         position: const LatLng(7.2906, 80.6337),
         infoWindow: const InfoWindow(title: ''),
-        onTap: () => _showCustomInfoWindow(
-          'Kandy',
-          'Cultural center of Sri Lanka',
-        ),
+        onTap: () =>
+            _showCustomInfoWindow('Kandy', 'Cultural center of Sri Lanka'),
       ),
       Marker(
         markerId: const MarkerId('galle'),
@@ -57,7 +52,7 @@ class _MapState extends State<Map> {
 
   void _showCustomInfoWindow(String title, String snippet) {
     _removeCustomInfoWindow();
-    
+
     final overlay = Overlay.of(context);
     _overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
@@ -71,10 +66,7 @@ class _MapState extends State<Map> {
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  const Color(0xFF4C1D95),
-                  const Color(0xFF7C3AED),
-                ],
+                colors: [const Color(0xFF4C1D95), const Color(0xFF7C3AED)],
               ),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
@@ -113,7 +105,7 @@ class _MapState extends State<Map> {
         ),
       ),
     );
-    
+
     overlay.insert(_overlayEntry!);
   }
 
@@ -127,91 +119,107 @@ class _MapState extends State<Map> {
       'Galle',
       'Historic coastal city',
     );
-    
-    //starting galle quest 
-    Future.delayed(const Duration(milliseconds: 500), () {
+
+    Future.delayed(const Duration(milliseconds: 500), () async {
       _removeCustomInfoWindow();
-      if (mounted) {
-        showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: Colors.transparent,
-          builder: (context) => QuestStartScreen(
-            questTitle: 'Galle Quest Started',
-            questId: 'galle-main-quest', // Use known quest ID
-            onQuestStarted: () {
-              // Navigate to quest screen
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => QuestScreen(
-                    quest: Quest(
-                      id: 'galle-main-quest',
-                      title: 'Galle Quest',
-                      description: 'Explore the historic coastal city of Galle and uncover its mysteries with the Adventurer\'s Guild.',
-                      difficulty: 'medium',
-                      questType: 'main_quest',
-                      totalXP: 500,
-                      tasks: [
-                        Task(
-                          id: 'meet-guildmaster',
-                          title: 'Meet Guildmaster',
-                          description: 'Meet Thorvald, Guildmaster of Galle',
-                          order: 1,
-                          type: 'dialogue',
-                          isLocked: false,
-                          isCompleted: false,
-                          xpReward: 50,
-                          taskData: {
-                            'dialogueData': {
-                              'npcName': 'Thorvald',
-                              'npcAvatar': 'guildmaster_avatar.png',
-                              'dialogueText': 'Hello there! It seems you are new to this area. The adventurers guild warmly welcomes you.',
-                              'emotion': 'neutral',
-                              'options': [
-                                {
-                                  'text': 'Continue listening',
-                                  'type': 'choice',
-                                  'nextDialogueId': 'welcome_02',
-                                  'action': 'continue'
-                                }
-                              ]
-                            }
-                          }
-                        )
-                      ],
-                      isActive: true,
-                      userStatus: 'not_started',
-                      tasksCompleted: 0,
-                      totalTasks: 1,
-                      rewards: {
-                        'xp': 500,
-                        'items': ['Established Membership Badge', 'Mysterious Map Fragment'],
-                        'unlocks': ['Guild Access']
-                      }
-                    ),
-                  ),
-                ),
-              );
-            },
+      if (!mounted) return;
+
+      // Load the Galle quest from the backend
+      Quest? galleQuest;
+      QuestProgress? existingProgress;
+      try {
+        final questResponse = await QuestService().getAllUserQuests();
+        galleQuest = questResponse.mainQuests.firstWhere(
+          (q) => q.title.toLowerCase().contains('galle'),
+          orElse: () => throw Exception('Galle quest not found'),
+        );
+        existingProgress = galleQuest.progress;
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Could not load Galle quest: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      final quest = galleQuest;
+      if (!mounted) return;
+
+      // If already in progress, go straight to the quest screen
+      if (quest.isInProgress && existingProgress != null) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) =>
+                QuestScreen(quest: quest, initialProgress: existingProgress),
           ),
         );
+        return;
       }
+
+      // If completed, show a message instead of re-starting
+      if (quest.isCompleted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('You have already completed the Galle quest!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        return;
+      }
+
+      // Show start animation, then call the backend to start the quest
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => QuestStartScreen(
+          questTitle: quest.title,
+          questId: quest.id,
+          onQuestStarted: () async {
+            try {
+              final progress = await QuestService().startQuest(quest.id);
+              if (ctx.mounted) {
+                Navigator.of(ctx).pop();
+                Navigator.of(ctx).push(
+                  MaterialPageRoute(
+                    builder: (context) => QuestScreen(
+                      quest: quest,
+                      initialProgress: progress,
+                    ),
+                  ),
+                );
+              }
+            } catch (e) {
+              if (ctx.mounted) {
+                Navigator.of(ctx).pop();
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  SnackBar(
+                    content: Text('Error starting quest: $e'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
+          },
+        ),
+      );
     });
   }
 
   Future<void> _setMapStyle() async {
     if (_isDarkMode) {
-      final String darkMapStyle = await DefaultAssetBundle.of(context)
-          .loadString('assets/map_styles/dark_map.json');
+      final String darkMapStyle = await DefaultAssetBundle.of(
+        context,
+      ).loadString('assets/map_styles/dark_map.json');
       await mapController.setMapStyle(darkMapStyle);
     } else {
       await mapController.setMapStyle(null); // Reset to default light style
     }
   }
-
-  
-
-
 
   void _onMapCreated(GoogleMapController controller) {
     mapController = controller;
@@ -233,7 +241,6 @@ class _MapState extends State<Map> {
         compassEnabled: true,
         mapToolbarEnabled: true,
       ),
-    
     );
   }
 

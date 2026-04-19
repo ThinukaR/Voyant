@@ -2,9 +2,9 @@ const mongoose = require("mongoose");
 
 const userSkillSchema = new mongoose.Schema({
   userId: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: String, // Firebase auth UID
     required: true,
-    ref: "User",
+    index: true,
   },
   skillId: {
     type: mongoose.Schema.Types.ObjectId,

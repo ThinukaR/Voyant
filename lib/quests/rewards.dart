@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
+import 'package:voyant/config/api_config.dart';
 
 class Reward {
-
-  //container for reward data 
+  //container for reward data
   final String id;
   final String title;
   final String description;
@@ -35,24 +35,29 @@ class Reward {
 }
 
 class RewardRepository {
-  static const String _baseUrl = 'http://10.0.2.2:3000/api'; //will have to re-adjust this for real phones
-  
-  static Future<void> saveRewardToUser(String userId, String rewardId, int currentXP, int newXP) async {
+  static Future<void> saveRewardToUser(
+    String userId,
+    String rewardId,
+    int currentXP,
+    int newXP,
+  ) async {
     try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/rewards/claim'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: json.encode({
-          'userId': userId,
-          'rewardId': rewardId,
-          'currentXP': currentXP,
-          'newXP': newXP,
-          'claimedAt': DateTime.now().toIso8601String(),
-        }),
-      ).timeout(const Duration(seconds: 10));
+      final response = await http
+          .post(
+            Uri.parse('${ApiConfig.baseUrl}/rewards/claim'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+            body: json.encode({
+              'userId': userId,
+              'rewardId': rewardId,
+              'currentXP': currentXP,
+              'newXP': newXP,
+              'claimedAt': DateTime.now().toIso8601String(),
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode != 201) {
         throw Exception('failed to save reward: ${response.statusCode}');
@@ -63,15 +68,15 @@ class RewardRepository {
   }
 }
 
-//main Ui setup 
+//main Ui setup
 class RewardScreen extends StatefulWidget {
   final String questName;
   final String rewardName;
   final String rewardImage;
   final String profileImage;
   final int expGained;
-  final double startProgress; 
-  final double endProgress;   
+  final double startProgress;
+  final double endProgress;
   final String userId;
   final String rewardId;
 
@@ -92,8 +97,7 @@ class RewardScreen extends StatefulWidget {
   State<RewardScreen> createState() => _RewardScreenState();
 }
 
-
-//animations 
+//animations
 class _RewardScreenState extends State<RewardScreen>
     with TickerProviderStateMixin {
   late AnimationController _cosmeticDropController;
@@ -112,57 +116,60 @@ class _RewardScreenState extends State<RewardScreen>
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-    _cosmeticDropAnimation = Tween<double>( //drops from top 
-      begin: -50.0,
-      end: 0.0,
-    ).animate(CurvedAnimation(
-      parent: _cosmeticDropController,
-      curve: Curves.bounceOut,
-    ));
+    _cosmeticDropAnimation =
+        Tween<double>(
+          //drops from top
+          begin: -50.0,
+          end: 0.0,
+        ).animate(
+          CurvedAnimation(
+            parent: _cosmeticDropController,
+            curve: Curves.bounceOut,
+          ),
+        );
 
-    // Glow animation 
-    _glowAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _cosmeticDropController,
-      curve: const Interval(0.5, 1.0, curve: Curves.easeInOut),
-    ));
-  
-   // animation for exp bar
+    // Glow animation
+    _glowAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _cosmeticDropController,
+        curve: const Interval(0.5, 1.0, curve: Curves.easeInOut),
+      ),
+    );
+
+    // animation for exp bar
     _expBarController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
-    _expBarAnimation = Tween<double>(
-      begin: widget.startProgress,
-      end: widget.endProgress,
-    ).animate(CurvedAnimation(
-      parent: _expBarController,
-      curve: Curves.easeInOut,
-    ));
+    _expBarAnimation =
+        Tween<double>(
+          begin: widget.startProgress,
+          end: widget.endProgress,
+        ).animate(
+          CurvedAnimation(parent: _expBarController, curve: Curves.easeInOut),
+        );
 
     _currentProgress = widget.startProgress;
 
     _cosmeticDropController.forward();
-    
-    // starting exp bar animation after reward drops 
+
+    // starting exp bar animation after reward drops
     Future.delayed(const Duration(milliseconds: 600), () {
       _expBarController.forward();
       _animateProgress();
     });
   }
 
- void _animateProgress() {
+  void _animateProgress() {
     final duration = const Duration(milliseconds: 1500);
     final steps = 60;
     final stepTime = duration.inMilliseconds ~/ steps;
 
-    //calculation to see how much the bar should increase per step 
+    //calculation to see how much the bar should increase per step
     double increment = (widget.endProgress - widget.startProgress) / steps;
 
-  //repeating timer 
-    Timer.periodic(Duration(milliseconds: stepTime), (timer) { 
+    //repeating timer
+    Timer.periodic(Duration(milliseconds: stepTime), (timer) {
       setState(() {
         _currentProgress += increment;
       });
@@ -175,18 +182,19 @@ class _RewardScreenState extends State<RewardScreen>
   }
 
   @override
-  //to stop any memory leaks that could happen 
+  //to stop any memory leaks that could happen
   void dispose() {
     _cosmeticDropController.dispose();
     _expBarController.dispose();
     super.dispose();
   }
 
- @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1B0330), 
-      body: SafeArea( // to prevent itfrom going behind system UI 
+      backgroundColor: const Color(0xFF1B0330),
+      body: SafeArea(
+        // to prevent itfrom going behind system UI
         child: Container(
           width: double.infinity,
           height: double.infinity,
@@ -213,7 +221,10 @@ class _RewardScreenState extends State<RewardScreen>
                   height: 50,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white.withOpacity(0.3), width: 2),
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.3),
+                      width: 2,
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.3),
@@ -250,7 +261,7 @@ class _RewardScreenState extends State<RewardScreen>
                 ),
               ),
 
-              // main body 
+              // main body
               Center(
                 child: Padding(
                   padding: const EdgeInsets.all(20.0),
@@ -291,7 +302,7 @@ class _RewardScreenState extends State<RewardScreen>
 
                       const SizedBox(height: 40),
 
-                      // displaying reward with an animation 
+                      // displaying reward with an animation
                       AnimatedBuilder(
                         animation: _cosmeticDropAnimation,
                         builder: (context, child) {
@@ -316,7 +327,9 @@ class _RewardScreenState extends State<RewardScreen>
                                     borderRadius: BorderRadius.circular(20),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.blue.withOpacity(_glowAnimation.value * 0.6),
+                                        color: Colors.blue.withOpacity(
+                                          _glowAnimation.value * 0.6,
+                                        ),
                                         blurRadius: 20 * _glowAnimation.value,
                                         spreadRadius: 5 * _glowAnimation.value,
                                       ),
@@ -333,13 +346,14 @@ class _RewardScreenState extends State<RewardScreen>
                                         ? Image.network(
                                             widget.rewardImage,
                                             fit: BoxFit.contain,
-                                            errorBuilder: (context, error, stackTrace) {
-                                              return const Icon(
-                                                Icons.emoji_events,
-                                                size: 60,
-                                                color: Colors.white,
-                                              );
-                                            },
+                                            errorBuilder:
+                                                (context, error, stackTrace) {
+                                                  return const Icon(
+                                                    Icons.emoji_events,
+                                                    size: 60,
+                                                    color: Colors.white,
+                                                  );
+                                                },
                                           )
                                         : const Icon(
                                             Icons.emoji_events,
@@ -355,7 +369,7 @@ class _RewardScreenState extends State<RewardScreen>
                       ),
 
                       const SizedBox(height: 24),
-                      // reward name 
+                      // reward name
                       Text(
                         widget.rewardName,
                         textAlign: TextAlign.center,
@@ -375,7 +389,7 @@ class _RewardScreenState extends State<RewardScreen>
 
                       const SizedBox(height: 30),
 
-                      // amount of exp that the user gained 
+                      // amount of exp that the user gained
                       Text(
                         "+${widget.expGained} EXP",
                         style: const TextStyle(
@@ -394,7 +408,7 @@ class _RewardScreenState extends State<RewardScreen>
 
                       const SizedBox(height: 20),
 
-                      // exp bar progression 
+                      // exp bar progression
                       Container(
                         width: 280,
                         height: 24,
@@ -423,7 +437,6 @@ class _RewardScreenState extends State<RewardScreen>
                                     ),
                                   ),
 
-
                                   // current progress will make the bar fill up to the nessesary level
                                   FractionallySizedBox(
                                     alignment: Alignment.centerLeft,
@@ -439,8 +452,8 @@ class _RewardScreenState extends State<RewardScreen>
                                       ),
                                     ),
                                   ),
-                                  
-                                  // xp progression indicator percentage 
+
+                                  // xp progression indicator percentage
                                   Center(
                                     child: Text(
                                       "${(_currentProgress * 100).toInt()}%",
@@ -460,12 +473,13 @@ class _RewardScreenState extends State<RewardScreen>
 
                       const SizedBox(height: 40),
 
-                       // Buttons
+                      // Buttons
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly, //ensures that the buttons are side by side 
+                        mainAxisAlignment: MainAxisAlignment
+                            .spaceEvenly, //ensures that the buttons are side by side
                         children: [
                           ElevatedButton(
-                            onPressed: () async { 
+                            onPressed: () async {
                               try {
                                 await RewardRepository.saveRewardToUser(
                                   widget.userId,
@@ -473,8 +487,9 @@ class _RewardScreenState extends State<RewardScreen>
                                   (widget.startProgress * 1000).toInt(),
                                   (widget.endProgress * 1000).toInt(),
                                 );
-                                
-                                if (mounted) { //proceeds if screen is active 
+
+                                if (mounted) {
+                                  //proceeds if screen is active
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Text('Reward saved !'),
@@ -486,7 +501,9 @@ class _RewardScreenState extends State<RewardScreen>
                                 if (mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text('Failed to save reward: $e'),
+                                      content: Text(
+                                        'Failed to save reward: $e',
+                                      ),
                                       backgroundColor: Colors.red,
                                     ),
                                   );
@@ -497,18 +514,23 @@ class _RewardScreenState extends State<RewardScreen>
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF4A148C),
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
                             child: const Text(
-
                               "Equip",
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
-                          //exit the current screen and return 
+                          //exit the current screen and return
                           ElevatedButton(
                             onPressed: () {
                               Navigator.pop(context);
@@ -516,14 +538,20 @@ class _RewardScreenState extends State<RewardScreen>
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.grey.shade600,
                               foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(8),
                               ),
                             ),
                             child: const Text(
                               "Continue",
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ],
@@ -539,14 +567,3 @@ class _RewardScreenState extends State<RewardScreen>
     );
   }
 }
-
-
-
-
-                 
-
-
-
-  
-
-

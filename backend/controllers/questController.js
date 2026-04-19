@@ -1,71 +1,70 @@
-
 const Quest = require("../models/Quest");
 const UserQuestProgress = require("../models/UserQuestProgress");
 const UserTrips = require("../models/UserTrips");
 const admin = require("../firebase/firebaseAdmin");
 const mongoose = require("mongoose");
 
-//get all quests 
+//get all quests
 exports.getAllUserQuests = async (req, res) => {
   try {
     const userId = req.userId;
-    
+
     //get user's trips with their quests
     const userTrips = await UserTrips.find({ userId });
-    const tripIds = userTrips.map(trip => trip.tripID);
-    
+    const tripIds = userTrips.map((trip) => trip.tripID);
+
     //get all quests for user (trip, main, location, npc)
     const allQuests = await Quest.find({
       $or: [
         { tripId: { $in: tripIds } }, // Trip quests
         { questType: "main_quest" }, // Main quests (always available)
         { questType: "location_quest" }, // Location quests
-        { questType: "npc_quest" } // NPC quests
-      ]
+        { questType: "npc_quest" }, // NPC quests
+      ],
     });
-    
+
     //get user's progress for these quests
-    const progressList = await UserQuestProgress.find({ 
-      userId, 
-      questId: { $in: allQuests.map(q => q._id) }
+    const progressList = await UserQuestProgress.find({
+      userId,
+      questId: { $in: allQuests.map((q) => q._id) },
     });
-    
+
     //merge progress into quests
-    const result = allQuests.map(quest => {
+    const result = allQuests.map((quest) => {
       const progress = progressList.find(
-        p => p.questId.toString() === quest._id.toString()
+        (p) => p.questId.toString() === quest._id.toString(),
       );
-      
+
       return {
         ...quest.toObject(),
         userStatus: progress ? progress.status : "not_started",
-        tasksCompleted: progress 
-          ? progress.taskProgress.filter(t => t.isCompleted).length 
+        tasksCompleted: progress
+          ? progress.taskProgress.filter((t) => t.isCompleted).length
           : 0,
         totalTasks: quest.tasks.length,
-        progress: progress || null
+        progress: progress || null,
       };
     });
-    
-    //grouping quests by type 
+
+    //grouping quests by type
     const groupedQuests = {
-      main_quests: result.filter(q => q.questType === 'main_quest'),
-      trip_quests: result.filter(q => q.questType === 'trip_quest'),
-      location_quests: result.filter(q => q.questType === 'location_quest'),
-      npc_quests: result.filter(q => q.questType === 'npc_quest')
+      main_quests: result.filter((q) => q.questType === "main_quest"),
+      trip_quests: result.filter((q) => q.questType === "trip_quest"),
+      location_quests: result.filter((q) => q.questType === "location_quest"),
+      npc_quests: result.filter((q) => q.questType === "npc_quest"),
     };
-    
+
     return res.json({
       quests: groupedQuests,
       trips: userTrips,
-      allQuests: result 
+      allQuests: result,
     });
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
 };
 
-//get quest by ID 
+//get quest by ID
 exports.getQuestById = async (req, res) => {
   try {
     const quest = await Quest.findById(req.params.id);
@@ -78,16 +77,16 @@ exports.getQuestById = async (req, res) => {
 
     return res.json({
       ...quest.toObject(),
-      questType: 'trip_quest', // Unified type
       userStatus: progress?.status || "not_started",
       totalXPEarned: progress?.totalXPEarned || 0,
+      progress: progress || null, // <-- ADD THIS
     });
   } catch (err) {
     return res.status(400).json({ message: err.message });
   }
 };
 
-//start quest 
+//start quest
 exports.startQuest = async (req, res) => {
   try {
     const quest = await Quest.findById(req.params.id);
@@ -101,20 +100,44 @@ exports.startQuest = async (req, res) => {
 
     if (existing) return res.json(existing);
 
+    const questType = quest.questType;
     //creating progress record
-    const taskProgress = quest.tasks.map(task => ({
+    const taskProgress = (quest.tasks || []).map((task) => ({
       taskId: task._id,
       isCompleted: false,
       xpAwarded: 0,
     }));
+
+    // For main quests: create placeholder subQuestProgress entries so index 0 is valid
+    const totalSubQuests =
+      questType === "main_quest" ? quest.totalSubQuests || 0 : 0;
+
+    const subQuestProgress =
+      questType === "main_quest" && totalSubQuests > 0
+        ? Array.from({ length: totalSubQuests }, (_, idx) => ({
+            // placeholder ObjectId; schema requires subQuestId
+            subQuestId: new mongoose.Types.ObjectId(),
+            status: idx === 0 ? "available" : "locked",
+            xpEarned: 0,
+            completedDialogueNodes: [],
+            userChoices: [],
+            flags: [],
+          }))
+        : [];
 
     const progress = await UserQuestProgress.create({
       userId: req.userId,
       questId: quest._id,
       tripId: quest.tripId,
       taskProgress,
-      status: 'in_progress',
+      status: "in_progress",
       startedAt: new Date(),
+      questType: questType,
+
+      // main quest fields (safe)
+      currentSubQuestIndex:
+        questType === "main_quest" && totalSubQuests > 0 ? 0 : 0,
+      subQuestProgress,
     });
 
     return res.status(201).json(progress);
@@ -123,7 +146,7 @@ exports.startQuest = async (req, res) => {
   }
 };
 
-//complete task 
+//complete task
 exports.completeTask = async (req, res) => {
   try {
     const quest = await Quest.findById(req.params.id);
@@ -133,24 +156,21 @@ exports.completeTask = async (req, res) => {
     if (!task) return res.status(404).json({ message: "Task not found" });
 
     //award XP in Firestore
-    const { leveledUp, newLevel } = await awardXP(
-      req.userId,
-      task.xpReward,
-    );
+    const { leveledUp, newLevel } = await awardXP(req.userId, task.xpReward);
 
     const progress = await UserQuestProgress.findOne({
       userId: req.userId,
       questId: new mongoose.Types.ObjectId(req.params.id),
     });
-    
+
     if (!progress)
       return res.status(400).json({ message: "Start the quest first" });
 
-    //check - if task is alredy done or not 
+    //check - if task is alredy done or not
     const taskProgress = progress.taskProgress.find(
-      tp => tp.taskId.toString() === task._id.toString()
+      (tp) => tp.taskId.toString() === task._id.toString(),
     );
-    
+
     if (taskProgress?.isCompleted) {
       return res.status(400).json({ message: "Task already completed" });
     }
@@ -168,14 +188,13 @@ exports.completeTask = async (req, res) => {
     progress.totalXPEarned += task.xpReward;
 
     //check - if all the tasks done
-    const allDone = progress.taskProgress.every(tp => tp.isCompleted);
+    const allDone = progress.taskProgress.every((tp) => tp.isCompleted);
     if (allDone) {
       progress.status = "completed";
       progress.completedAt = new Date();
     }
 
     await progress.save();
-    await awardXP(req.userId, task.xpReward);
 
     return res.json({
       passed: true,
@@ -205,22 +224,20 @@ exports.getQuestDialogue = async (req, res) => {
       return res.status(400).json({ message: "Start the quest first" });
     }
 
-
     //get current dialogue based on progress
-    const currentTask = quest.tasks.id(progress.taskProgress.find(tp => !tp.isCompleted)?.taskId);
-    
+    const currentTask = quest.tasks.id(
+      progress.taskProgress.find((tp) => !tp.isCompleted)?.taskId,
+    );
 
-    if (!currentTask || currentTask.type !== 'dialogue') {
+    if (!currentTask || currentTask.type !== "dialogue") {
       return res.status(400).json({ message: "No dialogue available" });
     }
-
-
 
     return res.json({
       dialogue: currentTask.dialogueData,
       questId: quest._id,
       taskId: currentTask._id,
-      progress: progress
+      progress: progress,
     });
   } catch (err) {
     return res.status(500).json({ message: err.message });
@@ -249,17 +266,19 @@ exports.processDialogueChoice = async (req, res) => {
     progress.userChoices = progress.userChoices || [];
     progress.userChoices.push({
       choice: choice,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
 
     //check - seeing if dialogue is complete
-    if (nextDialogueId === 'complete' || !nextDialogueId) {
-      const currentTask = quest.tasks.id(progress.taskProgress.find(tp => !tp.isCompleted)?.taskId);
-      if (currentTask && currentTask.type === 'dialogue') {
+    if (nextDialogueId === "complete" || !nextDialogueId) {
+      const currentTask = quest.tasks.id(
+        progress.taskProgress.find((tp) => !tp.isCompleted)?.taskId,
+      );
+      if (currentTask && currentTask.type === "dialogue") {
         const taskProgress = progress.taskProgress.find(
-          tp => tp.taskId.toString() === currentTask._id.toString()
+          (tp) => tp.taskId.toString() === currentTask._id.toString(),
         );
-        
+
         if (taskProgress) {
           taskProgress.isCompleted = true;
           taskProgress.completedAt = new Date();
@@ -274,73 +293,74 @@ exports.processDialogueChoice = async (req, res) => {
     return res.json({
       success: true,
       nextDialogueId: nextDialogueId,
-      progress: progress
+      progress: progress,
     });
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
 };
 
-//location-based quest triggers 
+//location-based quest triggers
 exports.checkNearbyTriggers = async (req, res) => {
   try {
     const { userId, lat, lng, radius = 100 } = req.query;
-    
+
     const userLat = parseFloat(lat);
     const userLng = parseFloat(lng);
     const searchRadius = parseInt(radius);
-    
+
     //find active nearby location triggers
     const nearbyTriggers = await QuestTrigger.find({
-      triggerType: 'location',
+      triggerType: "location",
       isActive: true,
-      'location.coordinates': {
+      "location.coordinates": {
         $near: {
           $geometry: {
             type: "Point",
-            coordinates: [userLng, userLat]
+            coordinates: [userLng, userLat],
           },
-          $maxDistance: searchRadius
-        }
-      }
+          $maxDistance: searchRadius,
+        },
+      },
     }).sort({ priority: -1 });
-    
+
     //filter triggers based on user conditions
     const availableTriggers = [];
-    
+
     for (const trigger of nearbyTriggers) {
       const alreadyTriggered = trigger.triggeredBy.some(
-        t => t.userId === userId
+        (t) => t.userId === userId,
       );
-      
+
       if (trigger.triggerOnce && alreadyTriggered) {
         continue;
       }
-      
+
       availableTriggers.push({
         triggerId: trigger._id,
         triggerType: trigger.triggerType,
         location: trigger.location,
         actions: trigger.actions,
         distance: calculateDistance(
-          userLat, userLng,
+          userLat,
+          userLng,
           trigger.location.coordinates.lat,
-          trigger.location.coordinates.lng
-        )
+          trigger.location.coordinates.lng,
+        ),
       });
     }
-    
+
     res.json({
       triggers: availableTriggers,
       userLocation: { lat: userLat, lng: userLng },
-      searchRadius
+      searchRadius,
     });
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
 };
 
-//helper functions 
+//helper functions
 async function awardXP(userId, xp) {
   const db = admin.firestore();
   const userRef = db.collection("users").doc(userId);
@@ -404,13 +424,13 @@ async function validateTaskAnswer(task, body) {
         };
       }
       return { passed: true };
-    
+
     case "number_input":
       if (parseInt(body.answer) !== task.numberInputData.correctAnswer) {
         return { passed: false, reason: "Wrong answer, try again" };
       }
       return { passed: true };
-    
+
     case "string_input":
       const correct = task.stringInputData.correctAnswer.toLowerCase().trim();
       const given = body.answer.toLowerCase().trim();
@@ -418,7 +438,7 @@ async function validateTaskAnswer(task, body) {
         return { passed: false, reason: "Wrong answer, try again" };
       }
       return { passed: true };
-    
+
     case "multiple_choice":
       const multipleChoiceCorrect = task.multipleChoiceData.correctAnswer
         .toLowerCase()
@@ -428,14 +448,14 @@ async function validateTaskAnswer(task, body) {
         return { passed: false, reason: "Wrong answer, try again" };
       }
       return { passed: true };
-    
+
     case "true_false":
       const trueFalseGiven = body.answer === true || body.answer === "true";
       if (trueFalseGiven !== task.trueFalseData.correctAnswer) {
         return { passed: false, reason: "Wrong answer, try again" };
       }
       return { passed: true };
-    
+
     default:
       return { passed: true };
   }
