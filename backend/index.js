@@ -12,32 +12,15 @@ process.on("unhandledRejection", (reason, promise) => {
 const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, ".env") });
 
-console.log("[STARTUP] Starting Voyant Backend Server...");
-console.log("[STARTUP] Looking for .env at:", path.resolve(__dirname, ".env"));
-console.log("[STARTUP] Environment variables loaded:");
-console.log("[STARTUP]   MONGO_URI:", process.env.MONGO_URI ? "SET" : "NOT SET");
-console.log("[STARTUP]   PORT:", process.env.PORT ? "SET" : "NOT SET");
-console.log("[STARTUP]   FIREBASE_CONFIG:", process.env.FIREBASE_CONFIG ? "SET" : "NOT SET");
+console.log('Environment variables loaded:');
+console.log('MONGO_URI:', process.env.MONGO_URI ? 'SET' : 'NOT SET');
 
-// Set defaults if not provided (for Render and production)
-const MONGO_URI = process.env.MONGO_URI;
-const PORT = process.env.PORT || 3000;
-
-if (!MONGO_URI) {
-  console.error("[ERROR] MONGO_URI environment variable is not set");
-  console.error("[ERROR] Please set MONGO_URI in Render dashboard environment variables");
-  process.exit(1);
+if (!process.env.MONGO_URI) {
+  throw new Error("MONGO_URI missing. Set it in environment variables");
 }
 
-// Initialize Firebase early (but don't crash if it fails)
-console.log("[STARTUP] Initializing Firebase Admin...");
-try {
-  require("./firebase/firebaseAdmin");
-  console.log("[STARTUP] ✓ Firebase Admin module loaded");
-} catch (firebaseError) {
-  console.warn("[STARTUP] ⚠ Firebase initialization issue:", firebaseError.message);
-  console.warn("[STARTUP] ⚠ Continuing without Firebase - authentication may not work");
-}
+// Imports
+require("./firebase/firebaseAdmin");
 
 const express = require("express");
 console.log("[STARTUP] ✓ Express loaded");
@@ -71,14 +54,34 @@ try {
 
 const app = express();
 
-// Routes
+// Parse JSON requests FIRST
 app.use(express.json());
 
 // Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'OK', message: 'Server is running' });
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', message: 'Server is running' });
 });
 
+// Database connection state
+let dbConnected = false;
+
+// Middleware to ensure database is connected (applied to API routes only)
+app.use('/api', async (req, res, next) => {
+  if (!dbConnected) {
+    try {
+      console.log('Connecting to database...');
+      await connectToDatabase();
+      dbConnected = true;
+      console.log('Database connected successfully');
+    } catch (error) {
+      console.error('Database connection error:', error);
+      return res.status(500).json({ error: 'Database connection failed', details: error.message });
+    }
+  }
+  next();
+});
+
+// Routes
 app.use("/api/user-account-details", userAccountDetailsRoutes);
 app.use("/api/avatars", avatarRoutes);
 app.use("/api/destinations", destinationRoutes);
@@ -90,33 +93,22 @@ app.use("/api/user-trips", userTripRoutes);
 app.use("/api/rewards", userRewardRoutes);
 app.use("/api/messages", messageLogRoutes);
 
-async function startApp() {
-  try {
-    console.log("[STARTUP] Connecting to database...");
-    await connectToDatabase();
-    console.log("[STARTUP] ✓ Database connection successful");
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: 'Route not found', path: req.path });
+});
 
-    console.log("[STARTUP] Starting Express server on port", PORT);
-    const server = app.listen(PORT, () => {
-      console.log("[STARTUP] ✓ Server running on port", PORT);
-      console.log("[STARTUP] ✓ All systems operational");
-      console.log("[STARTUP] Health check endpoint: http://localhost:" + PORT + "/health");
-    });
+// For local development
+if (process.env.NODE_ENV !== 'production') {
+  async function startApp() {
 
-    // Handle server errors
-    server.on("error", (err) => {
-      console.error("[SERVER ERROR]", err);
-      process.exit(1);
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
     });
-  } catch (error) {
-    console.error("[FATAL] Failed to start app:", error.message);
-    console.error("[FATAL] Stack trace:", error.stack);
-    process.exit(1);
   }
+
+  startApp();
 }
 
-console.log("[STARTUP] Calling startApp()...");
-startApp().catch((err) => {
-  console.error("[FATAL] startApp threw error:", err);
-  process.exit(1);
-});
+// Export for Vercel serverless functions
+module.exports = app;

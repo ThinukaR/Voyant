@@ -8,4 +8,6 @@ router.get("/", controller.getUserAccountDetailsList);
 router.get("/:id", controller.getUserAccountDetails);
 router.put("/:id", controller.updateUserAccountDetails);
 router.delete("/:id", controller.deleteUserAccountDetails);
+
+
 module.exports = router;

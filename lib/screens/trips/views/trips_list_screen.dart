@@ -14,7 +14,7 @@ class TripsTab extends StatefulWidget {
 }
 
 class _TripsTabState extends State<TripsTab> {
-  static const String baseUrl = 'https://api-cbmysz2x4a-uc.a.run.app/api';
+  static const String baseUrl = 'https://voyant-server.vercel.app/api';
 
   List<dynamic> trips = [];
   List<Quest> mainQuests = [];

@@ -19,7 +19,7 @@ class TripDetailScreen extends StatefulWidget {
 }
 
 class _TripDetailScreenState extends State<TripDetailScreen> {
-  static const String baseUrl = 'https://api-cbmysz2x4a-uc.a.run.app/api';
+  static const String baseUrl = 'https://voyant-server.vercel.app/api';
 
   List<dynamic> quests = [];
   bool isLoading = true;
