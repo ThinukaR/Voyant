@@ -577,7 +577,15 @@ class _CosmeticScreenState extends State<CosmeticScreen> {
 
     final ownedIds =
         (avatar?['ownedItems'] as List<dynamic>?)
-            ?.map((i) => i['_id'].toString())
+            ?.map((i) {
+              // Handle both string IDs and object structures
+              if (i is String) {
+                return i;
+              } else if (i is Map) {
+                return i['_id'].toString();
+              }
+              return '';
+            })
             .toSet() ??
         {};
 
