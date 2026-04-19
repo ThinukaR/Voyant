@@ -44,7 +44,7 @@ class _QuestStartScreenState extends State<QuestStartScreen>
       CurvedAnimation(parent: _animationController, curve: Curves.elasticOut),
     );
 
-    _animationController.addStatusListener((status) {
+    /*_animationController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         //navigates after animation finishes
         Future.delayed(const Duration(seconds: 1), () {
@@ -53,7 +53,7 @@ class _QuestStartScreenState extends State<QuestStartScreen>
           }
         });
       }
-    });
+    });*/
 
     _animationController.forward();
   }
@@ -164,8 +164,7 @@ class _QuestStartScreenState extends State<QuestStartScreen>
             // Close Button
             ElevatedButton.icon(
               onPressed: () {
-                widget.onQuestStarted?.call();
-                Navigator.of(context).pop();
+                Navigator.of(context).pop(true); // return "confirmed"
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,

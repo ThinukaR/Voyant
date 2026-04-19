@@ -100,14 +100,13 @@ exports.startQuest = async (req, res) => {
 
     if (existing) return res.json(existing);
 
+    const questType = quest.questType;
     //creating progress record
     const taskProgress = (quest.tasks || []).map((task) => ({
       taskId: task._id,
       isCompleted: false,
       xpAwarded: 0,
     }));
-
-    const questType = quest.questType; // required in your Quest schema
 
     // For main quests: create placeholder subQuestProgress entries so index 0 is valid
     const totalSubQuests =
@@ -129,11 +128,11 @@ exports.startQuest = async (req, res) => {
     const progress = await UserQuestProgress.create({
       userId: req.userId,
       questId: quest._id,
-      questType, // <-- ADD THIS (critical)
       tripId: quest.tripId,
       taskProgress,
       status: "in_progress",
       startedAt: new Date(),
+      questType: questType,
 
       // main quest fields (safe)
       currentSubQuestIndex:

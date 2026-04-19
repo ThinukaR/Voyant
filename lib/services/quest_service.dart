@@ -120,7 +120,7 @@ class QuestService {
       }
 
       if (response.statusCode == 200) {
-        return body; // {passed:true,...}
+        return json.decode(response.body);
       }
 
       // Wrong answer / validation failures should NOT throw (so UI can show banner)

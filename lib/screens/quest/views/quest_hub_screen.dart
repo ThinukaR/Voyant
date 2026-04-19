@@ -56,46 +56,29 @@ class _QuestHubScreenState extends State<QuestHubScreen> {
 
   Future<void> _startQuest(Quest quest) async {
     try {
-      //quest start animation
-      showModalBottomSheet(
+      final confirmed = await showModalBottomSheet<bool>(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
-        builder: (context) => QuestStartScreen(
-          questTitle: quest.title,
-          questId: quest.id,
-          onQuestStarted: () async {
-            //quest starts after animation
-            try {
-              final progress = await QuestService().startQuest(quest.id);
+        builder: (_) =>
+            QuestStartScreen(questTitle: quest.title, questId: quest.id),
+      );
 
-              //navigating to quest screen
-              if (context.mounted) {
-                Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        QuestScreen(quest: quest, initialProgress: progress),
-                  ),
-                );
-              }
-            } catch (e) {
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error starting quest: ${e.toString()}'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            }
-          },
+      if (confirmed != true) return;
+
+      final progress = await QuestService().startQuest(quest.id);
+
+      if (!mounted) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => QuestScreen(quest: quest, initialProgress: progress),
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error starting quest: ${e.toString()}'),
+          content: Text('Error starting quest: $e'),
           backgroundColor: Colors.red,
         ),
       );

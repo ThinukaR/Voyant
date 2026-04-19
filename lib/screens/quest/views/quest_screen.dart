@@ -39,26 +39,20 @@ class _QuestScreenState extends State<QuestScreen> {
         _error = null;
       });
 
-      // Always refresh progress from server so UI advances correctly.
-      // If server says "not started", progress will be null.
-      _currentProgress = await QuestService().getQuestProgress(widget.quest.id);
+      final latest = await QuestService().getQuestProgress(widget.quest.id);
+      final progress = latest ?? widget.initialProgress;
 
-      // If we were launched with initialProgress (from pressing START),
-      // use it as a fallback in case the server hasn't updated yet.
-      _currentProgress ??= widget.initialProgress;
-
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _currentProgress = progress;
+        _isLoading = false;
+      });
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-          _isLoading = false;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
     }
   }
 
@@ -98,6 +92,9 @@ class _QuestScreenState extends State<QuestScreen> {
         _progressChanged = true;
         await _loadQuestData();
         if (!mounted) return;
+
+        // ensure loading is false even if _loadQuestData doesn't hit setState
+        setState(() => _isLoading = false);
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

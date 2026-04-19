@@ -52,30 +52,31 @@ class _QuestsListScreenState extends State<QuestsListScreen> {
         onQuestStarted: () async {
           try {
             final progress = await QuestService().startQuest(quest.id);
-            if (ctx.mounted) {
-              Navigator.of(ctx).pop();
-              final changed = await Navigator.push<bool>(
-                context,
-                MaterialPageRoute(
-                  builder: (_) =>
-                      QuestScreen(quest: quest, initialProgress: progress),
-                ),
-              );
 
-              if (changed == true) {
-                await _loadQuests(); // whatever your function is called
-              }
+            if (!ctx.mounted) return;
+            Navigator.of(ctx).pop(); // close the bottom sheet
+
+            final changed = await Navigator.of(context).push<bool>(
+              MaterialPageRoute(
+                builder: (_) =>
+                    QuestScreen(quest: quest, initialProgress: progress),
+              ),
+            );
+
+            // optional: refresh list if something changed
+            if (changed == true) {
+              // call your reload method here, e.g. _loadQuests();
             }
           } catch (e) {
-            if (ctx.mounted) {
-              Navigator.of(ctx).pop();
-              ScaffoldMessenger.of(ctx).showSnackBar(
-                SnackBar(
-                  content: Text('Error starting quest: $e'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
+            if (!ctx.mounted) return;
+            Navigator.of(ctx).pop();
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error starting quest: $e'),
+                backgroundColor: Colors.red,
+              ),
+            );
           }
         },
       ),
