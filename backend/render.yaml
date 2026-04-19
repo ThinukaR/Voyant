@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: voyant-backend
+    env: node
+    plan: free
+    startCommand: npm start
+    envVars:
+      - key: MONGO_URI
+        scope: runtime
+      - key: PORT
+        value: 3000
+

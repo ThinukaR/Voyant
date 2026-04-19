@@ -48,6 +48,8 @@ class SkillTreeScreen extends StatefulWidget {
 class _SkillTreeScreenState extends State<SkillTreeScreen>
     with SingleTickerProviderStateMixin {
   // ── API ────────────────────────────────────────────────────
+  // Using Render backend - update if you have a custom domain
+  static const String baseUrl = 'https://voyant-0f9w.onrender.com/api';
 
   // ── State ──────────────────────────────────────────────────
   int _skillPoints = 0;
@@ -193,6 +195,7 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
     try {
       // get Firebase token for auth
       final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+      debugPrint('[SKILLS] Firebase token: ${token?.substring(0, 20)}...');
 
       final response = await http.get(
         Uri.parse('${ApiConfig.baseUrl}/skills'),
@@ -201,27 +204,74 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
+        debugPrint('[SKILLS] Loaded ${data.length} total skills from backend');
 
         // get user's unlocked skills from backend
+        debugPrint('[SKILLS] Fetching unlocked skills from: $baseUrl/user-skills/my-skills');
         final unlockedResponse = await http.get(
           Uri.parse('${ApiConfig.baseUrl}/user-skills/my-skills'),
           headers: {'Authorization': 'Bearer $token'},
         );
-        final List<dynamic> unlockedData = unlockedResponse.statusCode == 200
-            ? jsonDecode(unlockedResponse.body)
-            : [];
-        final unlockedIds = unlockedData
-            .map((us) => us['skillId']?['_id']?.toString() ?? '')
-            .toSet();
+        
+        debugPrint('[SKILLS] Unlocked response status: ${unlockedResponse.statusCode}');
+        debugPrint('[SKILLS] Unlocked response body: ${unlockedResponse.body}');
+        
+        Set<String> unlockedIds = {};
+        if (unlockedResponse.statusCode == 200) {
+          final List<dynamic> unlockedData = jsonDecode(unlockedResponse.body);
+          debugPrint('[SKILLS] Unlocked data list length: ${unlockedData.length}');
+          
+          for (int i = 0; i < unlockedData.length; i++) {
+            final us = unlockedData[i];
+            debugPrint('[SKILLS] Unlocked[$i]: $us');
+          }
+          
+          unlockedIds = unlockedData
+              .map((us) {
+                debugPrint('[SKILLS] Processing unlocked skill: $us');
+                
+                // Handle both nested object and direct ID formats
+                final skillId = us['skillId'];
+                debugPrint('[SKILLS] skillId field: $skillId (type: ${skillId.runtimeType})');
+                
+                String result;
+                if (skillId is Map) {
+                  result = skillId['_id']?.toString() ?? '';
+                  debugPrint('[SKILLS] Extracted from nested Map: $result');
+                } else if (skillId is String) {
+                  result = skillId;
+                  debugPrint('[SKILLS] Got direct String: $result');
+                } else {
+                  result = skillId?.toString() ?? '';
+                  debugPrint('[SKILLS] Converted to String: $result');
+                }
+                return result;
+              })
+              .where((id) => id.isNotEmpty)
+              .toSet();
+          debugPrint('[SKILLS] Final unlocked set: $unlockedIds (${unlockedIds.length} skills)');
+        } else {
+          debugPrint('[SKILLS] ✗ Failed to get unlocked skills: ${unlockedResponse.statusCode}');
+          debugPrint('[SKILLS] Error body: ${unlockedResponse.body}');
+        }
 
         final loadedNodes = data.map((skill) {
-          final isUnlocked = unlockedIds.contains(skill['_id'].toString());
+          final skillId = skill['_id'].toString();
+          final isUnlocked = unlockedIds.contains(skillId);
           final tier = skill['tier'] ?? 1;
+          
           final initialState = isUnlocked
               ? NodeState.unlocked
               : (tier == 1 ? NodeState.available : NodeState.locked);
+          
+          if (isUnlocked) {
+            debugPrint('[SKILL] ✓ ${skill['label'] ?? skill['name']}: UNLOCKED (id: $skillId)');
+          } else {
+            debugPrint('[SKILL] ✗ ${skill['label'] ?? skill['name']}: tier=$tier, unlocked=$isUnlocked, state=$initialState (id: $skillId)');
+          }
+          
           return SkillNode(
-            id: skill['_id'].toString(),
+            id: skillId,
             label: skill['label'] ?? skill['name'] ?? '',
             description: skill['description'] ?? '',
             icon: _stringToIcon(skill['icon'] ?? 'stars_rounded'),
@@ -236,7 +286,10 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
           _nodes = loadedNodes;
           isLoading = false;
         });
+        
+        // Recalculate only AFTER setting the new nodes
         _recalc();
+        debugPrint('[SKILLS] ✓ Loaded ${_nodes.length} total skills');
       } else {
         setState(() {
           error = 'Failed to load skills: ${response.statusCode}';
@@ -271,7 +324,11 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
 
   void _recalc() {
     for (final n in _nodes) {
-      if (n.state == NodeState.unlocked) continue;
+      // Never downgrade an unlocked skill
+      if (n.state == NodeState.unlocked) {
+        debugPrint('[RECALC] Keeping ${n.label} as unlocked');
+        continue;
+      }
       if (n.tier == 1) {
         n.state = NodeState.available;
       } else if (n.tier == 2) {
@@ -300,7 +357,10 @@ class _SkillTreeScreenState extends State<SkillTreeScreen>
   }
 
   void _onNodeTap(SkillNode node) async {
+    debugPrint('[TAP] Tapped skill: ${node.label}, state: ${node.state}, unlocked: ${node.state == NodeState.unlocked}');
+    
     if (node.state == NodeState.unlocked) {
+      debugPrint('[TAP] Showing info for already-unlocked skill: ${node.label}');
       _showInfo(node);
       return;
     }
@@ -1176,10 +1236,19 @@ class _NodeBubble extends StatelessWidget {
               ),
               boxShadow: unlocked
                   ? [
+                      // Inner glow
                       BoxShadow(
-                        color: nc.withValues(alpha: 0.3),
-                        blurRadius: 16,
-                        spreadRadius: 1,
+                        color: nc.withValues(alpha: 0.5),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 0),
+                      ),
+                      // Outer glow
+                      BoxShadow(
+                        color: nc.withValues(alpha: 0.25),
+                        blurRadius: 20,
+                        spreadRadius: 3,
+                        offset: const Offset(0, 0),
                       ),
                     ]
                   : [],
